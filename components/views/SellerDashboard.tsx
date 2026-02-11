@@ -366,7 +366,7 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
                 </div>
 
                 {cart.length > 0 && (
-                    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t dark:border-gray-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 md:hidden">
+                    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t dark:border-gray-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50 md:hidden">
                         <div className="flex justify-between items-center mb-3">
                             <span className="text-gray-500 dark:text-gray-400 font-medium">Items: {cart.length}</span>
                             <span className="text-brand-600 dark:text-brand-500 font-bold text-lg">Total Unds: {cart.reduce((a, b) => a + b.quantity, 0)}</span>
@@ -377,7 +377,7 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
                     </div>
                 )}
                 {cart.length > 0 && (
-                    <div className="hidden md:flex fixed bottom-8 right-8 z-20">
+                    <div className="hidden md:flex fixed bottom-8 right-8 z-50">
                         <Button onClick={handleSubmit} className="h-14 px-8 text-lg shadow-xl">
                             {localEditingOrderId ? 'Guardar Cambios' : 'Confirmar Pedido'} ({cart.reduce((a, b) => a + b.quantity, 0)}) <CheckCircle2 className="w-6 h-6 ml-2" />
                         </Button>
