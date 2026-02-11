@@ -249,7 +249,7 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
 
     if (mode === 'create') {
         return (
-            <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
+            <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950">
                 <div className="bg-white dark:bg-gray-900 p-4 sticky top-0 z-10 shadow-sm border-b dark:border-gray-800 space-y-4">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">
