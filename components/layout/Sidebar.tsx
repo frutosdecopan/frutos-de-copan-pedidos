@@ -30,7 +30,7 @@ export const Sidebar: FC<SidebarProps> = ({ user, onLogout, activeView, setView,
     return (
         <>
             {/* Desktop Sidebar */}
-            <div className="hidden md:flex w-64 flex-col fixed inset-y-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 z-50">
+            <div className="hidden sm:flex w-64 flex-col fixed inset-y-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 z-50">
                 <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-800 bg-brand-600">
                     <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mr-2 p-1">
                         <Logo className="w-full h-full" />
@@ -84,7 +84,7 @@ export const Sidebar: FC<SidebarProps> = ({ user, onLogout, activeView, setView,
             </div>
 
             {/* Mobile Header */}
-            <div className="md:hidden fixed top-0 inset-x-0 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 z-40">
+            <div className="sm:hidden fixed top-0 inset-x-0 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 z-40">
                 <div className="flex items-center gap-2">
                     <div className="w-7 h-7 bg-brand-600 rounded-full flex items-center justify-center p-1">
                         <Logo className="w-full h-full" />
@@ -110,7 +110,7 @@ export const Sidebar: FC<SidebarProps> = ({ user, onLogout, activeView, setView,
             </div>
 
             {/* Mobile Bottom Navigation */}
-            <div className="md:hidden fixed bottom-0 inset-x-0 bg-gray-900 dark:bg-gray-950 border-t border-gray-800 dark:border-gray-900 z-40 safe-area-inset-bottom">
+            <div className="sm:hidden fixed bottom-0 inset-x-0 bg-gray-900 dark:bg-gray-950 border-t border-gray-800 dark:border-gray-900 z-40 safe-area-inset-bottom">
                 <nav className="flex items-center justify-around px-2 py-2">
                     {visibleItems.map(item => (
                         <button

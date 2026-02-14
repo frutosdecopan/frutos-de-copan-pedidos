@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, ShoppingCart, CheckCircle2, Clock, MapPin, Package, Edit2 } from 'lucide-react';
+import { Plus, Search, ShoppingCart, CheckCircle2, Clock, MapPin, Package, Edit2, ChevronDown, ChevronUp } from 'lucide-react';
 import { User, Order, OrderStatus, OrderType, OrderItem } from '../../types';
 import { useCities } from '../../hooks/useCities';
 import { Button, StatusBadge, TypeBadge, CardSkeleton } from '../common';
@@ -118,6 +118,7 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
     const [clientName, setClientName] = useState('');
     const [cart, setCart] = useState<OrderItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [headerCollapsed, setHeaderCollapsed] = useState(false);
 
     // Initialize destination when destinations load
     useEffect(() => {
@@ -211,6 +212,32 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
         });
     };
 
+    const setQuantity = (productId: string, presentationId: string, quantity: number) => {
+        const qty = Math.max(0, Math.floor(quantity)); // Ensure positive integer
+        if (qty === 0) {
+            // Remove from cart if quantity is 0
+            setCart(prev => prev.filter(i => !(i.productId === productId && i.presentationId === presentationId)));
+        } else {
+            setCart(prev => {
+                const existing = prev.find(i => i.productId === productId && i.presentationId === presentationId);
+                const product = products.find(p => p.id === productId)!;
+                const presentation = presentations.find(p => p.id === presentationId)!;
+
+                if (existing) {
+                    return prev.map(i => i === existing ? { ...i, quantity: qty } : i);
+                } else {
+                    return [...prev, {
+                        productId,
+                        presentationId,
+                        quantity: qty,
+                        productName: product.name,
+                        presentationName: presentation.name
+                    }];
+                }
+            });
+        }
+    };
+
     const getQuantity = (prodId: string, presId: string) => {
         return cart.find(i => i.productId === prodId && i.presentationId === presId)?.quantity || 0;
     };
@@ -255,62 +282,87 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                             {localEditingOrderId ? 'Editar Pedido' : 'Nuevo Pedido'}
                         </h2>
-                        <Button variant="ghost" onClick={() => setMode('list')}>Cancelar</Button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setHeaderCollapsed(!headerCollapsed)}
+                                className="md:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-2"
+                            >
+                                {headerCollapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+                            </button>
+                            <Button variant="ghost" onClick={() => setMode('list')}>Cancelar</Button>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo de Pedido</label>
-                            <select
-                                value={selectedOrderType}
-                                onChange={(e) => setSelectedOrderType(e.target.value as OrderType)}
-                                className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 bg-white dark:bg-gray-800"
-                            >
-                                {Object.values(OrderType).map(type => (
-                                    <option key={type} value={type}>{type}</option>
-                                ))}
-                            </select>
+                    {/* Collapsed Header Summary (Mobile Only) */}
+                    {headerCollapsed && (
+                        <div className="md:hidden bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 text-sm">
+                            <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                    <div className="font-semibold text-gray-900 dark:text-white">{clientName || 'Sin cliente'}</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                        {selectedDestination} • {selectedOrderType}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                    )}
 
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Nombre del Cliente / Negocio *</label>
-                            <input
-                                type="text"
-                                value={clientName}
-                                onChange={(e) => setClientName(e.target.value)}
-                                placeholder="Ej: Supermercado La Colonia"
-                                className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 bg-white dark:bg-gray-800"
-                            />
-                        </div>
+                    {/* Expanded Header Form */}
+                    {!headerCollapsed && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo de Pedido</label>
+                                <select
+                                    value={selectedOrderType}
+                                    onChange={(e) => setSelectedOrderType(e.target.value as OrderType)}
+                                    className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 bg-white dark:bg-gray-800"
+                                >
+                                    {Object.values(OrderType).map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                    ))}
+                                </select>
+                            </div>
 
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Lugar de Entrega (Destino)</label>
-                            <select
-                                value={selectedDestination}
-                                onChange={(e) => setSelectedDestination(e.target.value)}
-                                className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 bg-white dark:bg-gray-800"
-                            >
-                                {destinations.map(dest => (
-                                    <option key={dest.id} value={dest.name}>{dest.name}</option>
-                                ))}
-                            </select>
-                        </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Nombre del Cliente / Negocio *</label>
+                                <input
+                                    type="text"
+                                    value={clientName}
+                                    onChange={(e) => setClientName(e.target.value)}
+                                    placeholder="Ej: Supermercado La Colonia"
+                                    className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 bg-white dark:bg-gray-800"
+                                />
+                            </div>
 
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Bodega de Despacho (Origen)</label>
-                            <select
-                                value={selectedWarehouseId}
-                                onChange={(e) => setSelectedWarehouseId(e.target.value)}
-                                className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 bg-white dark:bg-gray-800"
-                            >
-                                {availableWarehouses.map(wh => (
-                                    <option key={wh.warehouseId} value={wh.warehouseId}>
-                                        {wh.warehouseName}
-                                    </option>
-                                ))}
-                            </select>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Lugar de Entrega (Destino)</label>
+                                <select
+                                    value={selectedDestination}
+                                    onChange={(e) => setSelectedDestination(e.target.value)}
+                                    className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 bg-white dark:bg-gray-800"
+                                >
+                                    {destinations.map(dest => (
+                                        <option key={dest.id} value={dest.name}>{dest.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Bodega de Despacho (Origen)</label>
+                                <select
+                                    value={selectedWarehouseId}
+                                    onChange={(e) => setSelectedWarehouseId(e.target.value)}
+                                    className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 bg-white dark:bg-gray-800"
+                                >
+                                    {availableWarehouses.map(wh => (
+                                        <option key={wh.warehouseId} value={wh.warehouseId}>
+                                            {wh.warehouseName}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 pb-32">
@@ -341,14 +393,27 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
                                         return (
                                             <div key={pres.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
                                                 <span className="text-gray-600 dark:text-gray-300 font-medium">{pres.name}</span>
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-2">
                                                     <button
                                                         onClick={() => updateCart(product.id, pres.id, -1)}
-                                                        className={`w-8 h-8 flex items-center justify-center rounded-full border ${qty > 0 ? 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-brand-600 dark:text-brand-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 border-transparent'}`}
+                                                        className={`w-8 h-8 flex items-center justify-center rounded-full border ${qty > 0 ? 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-brand-600 dark:text-brand-400 hover:bg-gray-50 dark:hover:bg-gray-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 border-transparent'}`}
                                                     >
                                                         -
                                                     </button>
-                                                    <span className={`w-8 text-center font-bold ${qty > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600'}`}>{qty}</span>
+                                                    <input
+                                                        type="number"
+                                                        inputMode="numeric"
+                                                        value={qty || ''}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value === '' ? 0 : parseInt(e.target.value);
+                                                            if (!isNaN(val) && val >= 0) {
+                                                                setQuantity(product.id, pres.id, val);
+                                                            }
+                                                        }}
+                                                        onFocus={(e) => e.target.select()}
+                                                        placeholder="0"
+                                                        className={`w-16 text-center font-bold text-base p-1 rounded border ${qty > 0 ? 'text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600' : 'text-gray-400 dark:text-gray-600 bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700'} focus:ring-2 focus:ring-brand-500 focus:outline-none`}
+                                                    />
                                                     <button
                                                         onClick={() => updateCart(product.id, pres.id, 1)}
                                                         className="w-8 h-8 flex items-center justify-center rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-sm active:bg-brand-700"

@@ -135,7 +135,7 @@ export const AdminDashboard = ({ orders, isDark, loading = false }: AdminDashboa
     };
 
     return (
-        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 bg-gray-50/50 dark:bg-gray-950/50 min-h-screen">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 bg-gray-50 dark:bg-gray-950 min-h-screen">
             {/* Header Area */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
                 <div>

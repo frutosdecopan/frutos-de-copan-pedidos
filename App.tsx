@@ -219,7 +219,7 @@ const App = () => {
   }
 
   return (
-    <div className={`min-h-screen transition-colors bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans`}>
+    <div className={`min-h-screen transition-colors bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-50 font-sans`}>
       <Sidebar
         user={user}
         onLogout={handleLogout}
@@ -229,7 +229,7 @@ const App = () => {
         isDark={isDark}
       />
 
-      <div className="md:ml-64 pt-14 md:pt-0 pb-20 md:pb-0 min-h-screen">
+      <div className="sm:ml-64 pt-14 sm:pt-0 pb-20 sm:pb-0 min-h-screen">
         <div key={currentView} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           <Suspense fallback={<LoadingFallback />}>
             {currentView === 'dashboard' && user.role !== UserRole.SELLER && user.role !== UserRole.DELIVERY && (

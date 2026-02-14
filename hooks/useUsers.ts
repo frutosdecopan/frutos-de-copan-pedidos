@@ -53,7 +53,7 @@ export function useUsers() {
                     password: userData.password,
                     email: `${userData.username}@frutos.com`,
                     role: userData.role,
-                    assigned_cities: userData.assignedCities,
+                    assigned_cities: (userData.assignedCities || []).filter(id => id && id.trim() !== ''),
                     unavailable_dates: userData.unavailableDates || [],
                     is_active: userData.isActive !== false,
                 })
@@ -80,7 +80,9 @@ export function useUsers() {
             if (userData.username) updateData.username = userData.username;
             if (userData.password) updateData.password = userData.password;
             if (userData.role) updateData.role = userData.role;
-            if (userData.assignedCities) updateData.assigned_cities = userData.assignedCities;
+            if (userData.assignedCities) {
+                updateData.assigned_cities = (userData.assignedCities || []).filter(id => id && id.trim() !== '');
+            }
             if (userData.unavailableDates !== undefined) {
                 updateData.unavailable_dates = userData.unavailableDates;
             }

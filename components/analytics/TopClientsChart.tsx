@@ -85,17 +85,17 @@ export const TopClientsChart: FC<TopClientsChartProps> = ({ orders, isDark }) =>
                 {topClients.map((client, index) => (
                     <div
                         key={client.clientName}
-                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700 transition-colors"
+                        className="flex items-start justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700 transition-colors"
                     >
-                        <div className="flex items-center gap-3 flex-1">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-bold text-sm">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-bold text-sm flex-shrink-0">
                                 {index + 1}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className="font-semibold text-gray-900 dark:text-white truncate">
+                                <div className="font-semibold text-gray-900 dark:text-white truncate" title={client.clientName}>
                                     {client.clientName}
                                 </div>
-                                <div className="flex items-center gap-2 mt-1">
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
                                     <span className={`text-xs px-2 py-0.5 rounded-full border ${getFrequencyBadge(client.frequency)} font-medium`}>
                                         {getFrequencyIcon(client.frequency)} {client.frequency}
                                     </span>

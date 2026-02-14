@@ -78,6 +78,25 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
         setRejectReason('');
     };
 
+    const handleStatusChange = (order: Order, newStatus: OrderStatus) => {
+        // Rule 1: Cannot move TO Dispatch without a driver assigned
+        if (newStatus === OrderStatus.DISPATCH && !order.assignedDeliveryId) {
+            addToast('⚠️ DEBE ASIGNAR UN REPARTIDOR:\nPara pasar a "Despacho", primero seleccione un repartidor en la lista.', 'error', 6000);
+            return;
+        }
+
+        // Rule 2: Cannot move FROM Dispatch (if driver assigned) to previous states
+        // We allow moving to DELIVERED (forward) or CANCELLED (termination), but prevent regressions like "Back to Production"
+        if (order.status === OrderStatus.DISPATCH && order.assignedDeliveryId) {
+            if (newStatus !== OrderStatus.DELIVERED && newStatus !== OrderStatus.CANCELLED) {
+                addToast('🔒 PEDIDO EN RUTA:\nEl pedido ya está en manos del repartidor. No se puede revertir el estado.', 'error', 5000);
+                return;
+            }
+        }
+
+        onUpdateStatus(order.id, newStatus);
+    };
+
 
     const sellers = useMemo(() => users.filter(u => u.role === UserRole.SELLER), [users]);
     const availableDeliveryUsers = useMemo(() => users.filter(u => u.role === UserRole.DELIVERY), [users]);
@@ -240,13 +259,13 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                     {!hasFullAccess && (
                         <>
                             {order.status !== OrderStatus.DRAFT && (
-                                <button onClick={() => onUpdateStatus(order.id, OrderStatus.DRAFT)} className={`${btnClass} ${getStyle('gray')}`}>Borrador</button>
+                                <button onClick={() => handleStatusChange(order, OrderStatus.DRAFT)} className={`${btnClass} ${getStyle('gray')}`}>Borrador</button>
                             )}
                             {order.status !== OrderStatus.REVIEW && (
-                                <button onClick={() => onUpdateStatus(order.id, OrderStatus.REVIEW)} className={`${btnClass} ${getStyle('blue')}`}>Revisión</button>
+                                <button onClick={() => handleStatusChange(order, OrderStatus.REVIEW)} className={`${btnClass} ${getStyle('blue')}`}>Revisión</button>
                             )}
                             {order.status !== OrderStatus.DISPATCH && (
-                                <button onClick={() => onUpdateStatus(order.id, OrderStatus.DISPATCH)} className={`${btnClass} ${getStyle('orange')} flex items-center justify-center`}>
+                                <button onClick={() => handleStatusChange(order, OrderStatus.DISPATCH)} className={`${btnClass} ${getStyle('orange')} flex items-center justify-center`}>
                                     <Truck className="w-3 h-3 mr-1" /> Despacho
                                 </button>
                             )}
@@ -270,23 +289,23 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                     {hasFullAccess && (
                         <>
                             {order.status !== OrderStatus.DRAFT && (
-                                <button onClick={() => onUpdateStatus(order.id, OrderStatus.DRAFT)} className={`${btnClass} ${getStyle('gray')}`}>Borrador</button>
+                                <button onClick={() => handleStatusChange(order, OrderStatus.DRAFT)} className={`${btnClass} ${getStyle('gray')}`}>Borrador</button>
                             )}
                             {order.status !== OrderStatus.SENT && (
-                                <button onClick={() => onUpdateStatus(order.id, OrderStatus.SENT)} className={`${btnClass} ${getStyle('yellow')}`}>Enviado</button>
+                                <button onClick={() => handleStatusChange(order, OrderStatus.SENT)} className={`${btnClass} ${getStyle('yellow')}`}>Enviado</button>
                             )}
                             {order.status !== OrderStatus.REVIEW && (
-                                <button onClick={() => onUpdateStatus(order.id, OrderStatus.REVIEW)} className={`${btnClass} ${getStyle('blue')}`}>Revisión</button>
+                                <button onClick={() => handleStatusChange(order, OrderStatus.REVIEW)} className={`${btnClass} ${getStyle('blue')}`}>Revisión</button>
                             )}
                             {order.status !== OrderStatus.PRODUCTION && (
-                                <button onClick={() => onUpdateStatus(order.id, OrderStatus.PRODUCTION)} className={`${btnClass} ${getStyle('purple')}`}>Producción</button>
+                                <button onClick={() => handleStatusChange(order, OrderStatus.PRODUCTION)} className={`${btnClass} ${getStyle('purple')}`}>Producción</button>
                             )}
                             {order.status !== OrderStatus.DISPATCH && (
-                                <button onClick={() => onUpdateStatus(order.id, OrderStatus.DISPATCH)} className={`${btnClass} ${getStyle('orange')} flex items-center justify-center`}>
+                                <button onClick={() => handleStatusChange(order, OrderStatus.DISPATCH)} className={`${btnClass} ${getStyle('orange')} flex items-center justify-center`}>
                                     <Truck className="w-3 h-3 mr-1" /> Despacho
                                 </button>
                             )}
-                            <button onClick={() => onUpdateStatus(order.id, OrderStatus.DELIVERED)} className={`${btnClass} ${getStyle('green')}`}>Entregado</button>
+                            <button onClick={() => handleStatusChange(order, OrderStatus.DELIVERED)} className={`${btnClass} ${getStyle('green')}`}>Entregado</button>
                             <div className="flex gap-1 justify-end w-full">
                                 <button onClick={() => handleOpenComments(order)} className={`${btnClass} ${getStyle('blue')} flex items-center justify-center relative flex-1`}>
                                     <MessageSquare className="w-3 h-3" />
@@ -310,10 +329,10 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
         return (
             <div className={`flex ${isMobile ? 'flex-row gap-2 w-full' : 'flex-col gap-1 w-32 ml-auto'}`}>
                 {order.status === OrderStatus.REVIEW && (
-                    <button onClick={() => onUpdateStatus(order.id, OrderStatus.PRODUCTION)} className={`${btnClass} ${getStyle('purple')}`}>Producción</button>
+                    <button onClick={() => handleStatusChange(order, OrderStatus.PRODUCTION)} className={`${btnClass} ${getStyle('purple')}`}>Producción</button>
                 )}
                 {order.status === OrderStatus.PRODUCTION && (
-                    <button onClick={() => onUpdateStatus(order.id, OrderStatus.DISPATCH)} className={`${btnClass} ${getStyle('orange')}`}>Despachar</button>
+                    <button onClick={() => handleStatusChange(order, OrderStatus.DISPATCH)} className={`${btnClass} ${getStyle('orange')}`}>Despachar</button>
                 )}
             </div>
         )

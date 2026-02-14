@@ -6,14 +6,12 @@ export const useTheme = () => {
     const [theme, setTheme] = useState<Theme>(() => {
         // Check localStorage first
         if (typeof window !== 'undefined') {
-            const savedTheme = localStorage.getItem('theme');
+            const savedTheme = localStorage.getItem('app_theme');
             if (savedTheme === 'dark' || savedTheme === 'light') {
                 return savedTheme;
             }
-            // Check system preference
-            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                return 'dark';
-            }
+            // Default to light
+            return 'light';
         }
         return 'light';
     });
@@ -25,7 +23,7 @@ export const useTheme = () => {
         } else {
             root.classList.remove('dark');
         }
-        localStorage.setItem('theme', theme);
+        localStorage.setItem('app_theme', theme);
     }, [theme]);
 
     const toggleTheme = () => {

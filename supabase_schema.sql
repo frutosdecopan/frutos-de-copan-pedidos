@@ -72,6 +72,8 @@ CREATE TABLE IF NOT EXISTS warehouses (
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
+  username TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
   email TEXT UNIQUE,
   role user_role NOT NULL,
   assigned_cities UUID[] DEFAULT '{}',
@@ -219,13 +221,13 @@ INSERT INTO presentations (id, name, weight_kg) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- Insert Mock Users
-INSERT INTO users (id, name, email, role, assigned_cities, unavailable_dates) VALUES
-  ('e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1', 'Juan Vendedor (SPS)', 'juan@frutos.com', 'Vendedor', ARRAY['a2a2a2a2-b2b2-c2c2-d2d2-e2e2e2e2e2e2']::UUID[], '{}'),
-  ('e2e2e2e2-e2e2-e2e2-e2e2-e2e2e2e2e2e2', 'Maria Bodega (SPS)', 'maria@frutos.com', 'Bodega', ARRAY['a2a2a2a2-b2b2-c2c2-d2d2-e2e2e2e2e2e2']::UUID[], '{}'),
-  ('e3e3e3e3-e3e3-e3e3-e3e3-e3e3e3e3e3e3', 'Carlos Producción', 'carlos@frutos.com', 'Producción', ARRAY['a4a4a4a4-b4b4-c4c4-d4d4-e4e4e4e4e4e4']::UUID[], '{}'),
-  ('e4e4e4e4-e4e4-e4e4-e4e4-e4e4e4e4e4e4', 'Admin General', 'admin@frutos.com', 'Administrador', ARRAY['a1a1a1a1-b1b1-c1c1-d1d1-e1e1e1e1e1e1', 'a2a2a2a2-b2b2-c2c2-d2d2-e2e2e2e2e2e2', 'a3a3a3a3-b3b3-c3c3-d3d3-e3e3e3e3e3e3', 'a4a4a4a4-b4b4-c4c4-d4d4-e4e4e4e4e4e4', 'a5a5a5a5-b5b5-c5c5-d5d5-e5e5e5e5e5e5']::UUID[], '{}'),
-  ('e5e5e5e5-e5e5-e5e5-e5e5-e5e5e5e5e5e5', 'Pedro Reparto (SPS)', 'pedro@frutos.com', 'Repartidor', ARRAY['a2a2a2a2-b2b2-c2c2-d2d2-e2e2e2e2e2e2']::UUID[], '{}'),
-  ('e6e6e6e6-e6e6-e6e6-e6e6-e6e6e6e6e6e6', 'Luis Reparto (Ceiba)', 'luis@frutos.com', 'Repartidor', ARRAY['a1a1a1a1-b1b1-c1c1-d1d1-e1e1e1e1e1e1']::UUID[], ARRAY[CURRENT_DATE]::DATE[])
+INSERT INTO users (id, name, username, password, email, role, assigned_cities, unavailable_dates) VALUES
+  ('e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1', 'Juan Vendedor (SPS)', 'juan', 'frutos123', 'juan@frutos.com', 'Vendedor', ARRAY['a2a2a2a2-b2b2-c2c2-d2d2-e2e2e2e2e2e2']::UUID[], '{}'),
+  ('e2e2e2e2-e2e2-e2e2-e2e2-e2e2e2e2e2e2', 'Maria Bodega (SPS)', 'maria', 'frutos123', 'maria@frutos.com', 'Bodega', ARRAY['a2a2a2a2-b2b2-c2c2-d2d2-e2e2e2e2e2e2']::UUID[], '{}'),
+  ('e3e3e3e3-e3e3-e3e3-e3e3-e3e3e3e3e3e3', 'Carlos Producción', 'carlos', 'frutos123', 'carlos@frutos.com', 'Producción', ARRAY['a4a4a4a4-b4b4-c4c4-d4d4-e4e4e4e4e4e4']::UUID[], '{}'),
+  ('e4e4e4e4-e4e4-e4e4-e4e4-e4e4e4e4e4e4', 'Admin General', 'admin', 'frutos123', 'admin@frutos.com', 'Administrador', ARRAY['a1a1a1a1-b1b1-c1c1-d1d1-e1e1e1e1e1e1', 'a2a2a2a2-b2b2-c2c2-d2d2-e2e2e2e2e2e2', 'a3a3a3a3-b3b3-c3c3-d3d3-e3e3e3e3e3e3', 'a4a4a4a4-b4b4-c4c4-d4d4-e4e4e4e4e4e4', 'a5a5a5a5-b5b5-c5c5-d5d5-e5e5e5e5e5e5']::UUID[], '{}'),
+  ('e5e5e5e5-e5e5-e5e5-e5e5-e5e5e5e5e5e5', 'Pedro Reparto (SPS)', 'pedro', 'frutos123', 'pedro@frutos.com', 'Repartidor', ARRAY['a2a2a2a2-b2b2-c2c2-d2d2-e2e2e2e2e2e2']::UUID[], '{}'),
+  ('e6e6e6e6-e6e6-e6e6-e6e6-e6e6e6e6e6e6', 'Luis Reparto (Ceiba)', 'luis', 'frutos123', 'luis@frutos.com', 'Repartidor', ARRAY['a1a1a1a1-b1b1-c1c1-d1d1-e1e1e1e1e1e1']::UUID[], ARRAY[CURRENT_DATE]::DATE[])
 ON CONFLICT (email) DO NOTHING;
 
 -- =============================================

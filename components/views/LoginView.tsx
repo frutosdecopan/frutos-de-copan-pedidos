@@ -1,7 +1,8 @@
 import { FC, useState } from 'react';
-import { LogIn, AlertCircle } from 'lucide-react';
+import { LogIn, AlertCircle, Sun, Moon } from 'lucide-react';
 import { User } from '../../types';
 import { Logo } from '../common';
+import { useTheme } from '../../hooks/useTheme';
 
 interface LoginViewProps {
     onLogin: (user: User) => void;
@@ -12,6 +13,7 @@ export const LoginView: FC<LoginViewProps> = ({ onLogin, users }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const { isDark, toggleTheme } = useTheme();
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -22,7 +24,6 @@ export const LoginView: FC<LoginViewProps> = ({ onLogin, users }) => {
             return;
         }
 
-        // Find user by username (case-insensitive), fallback to name if username is empty
         const user = users.find(u => {
             const userUsername = u.username?.toLowerCase() || '';
             const userName = u.name?.toLowerCase() || '';
@@ -36,24 +37,28 @@ export const LoginView: FC<LoginViewProps> = ({ onLogin, users }) => {
             return;
         }
 
-        // Check if user is active
         if (!user.isActive) {
             setError('Este usuario está inactivo. Contacta al administrador.');
             return;
         }
 
-        // Validate password
         if (user.password !== password) {
             setError('Usuario o contraseña incorrectos');
             return;
         }
 
-        // Successful login
         onLogin(user);
     };
 
     return (
-        <div className="min-h-screen bg-brand-50 dark:bg-gray-950 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-brand-50 dark:bg-gray-900 flex items-center justify-center p-4 relative transition-colors duration-200">
+            <button
+                onClick={toggleTheme}
+                className="absolute top-4 right-4 p-2 rounded-lg bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition-all backdrop-blur-sm"
+                title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            >
+                {isDark ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+            </button>
             <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden border border-transparent dark:border-gray-800">
                 <div className="bg-brand-600 p-8 text-center flex flex-col items-center">
                     <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-4 shadow-lg p-2">
@@ -105,7 +110,7 @@ export const LoginView: FC<LoginViewProps> = ({ onLogin, users }) => {
 
                         <button
                             type="submit"
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg transition-colors focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg transition-colors focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
                         >
                             <LogIn className="w-5 h-5" />
                             Iniciar Sesión

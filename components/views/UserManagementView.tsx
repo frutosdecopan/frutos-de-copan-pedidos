@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Trash2, UserPlus, Edit2, X, Check } from 'lucide-react';
 import { User, UserRole } from '../../types';
 import { useCities } from '../../hooks/useCities';
@@ -23,6 +23,13 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
     const [newRole, setNewRole] = useState<UserRole>(UserRole.SELLER);
     const [newCityId, setNewCityId] = useState<string>(cities[0]?.id || '');
     const [newIsActive, setNewIsActive] = useState(true);
+
+    // Update default city when cities load
+    useEffect(() => {
+        if (cities.length > 0 && !newCityId) {
+            setNewCityId(cities[0].id);
+        }
+    }, [cities, newCityId]);
 
     // Edit state
     const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -348,41 +355,131 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
                 {/* Mobile Cards */}
                 <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-800">
                     {users.map(u => (
-                        <div key={u.id} className={`p-4 flex flex-col gap-3 ${!u.isActive ? 'opacity-50' : ''}`}>
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <div className="font-semibold text-gray-900 dark:text-white">{u.name}</div>
-                                    <div className="text-sm text-gray-500 dark:text-gray-400">@{u.username}</div>
+                        <div key={u.id} className={`p-4 flex flex-col gap-3 ${!u.isActive && editingUser?.id !== u.id ? 'opacity-50' : ''}`}>
+                            {editingUser?.id === u.id ? (
+                                // Mobile Edit Mode
+                                <div className="space-y-3 bg-brand-50 dark:bg-brand-900/10 -m-4 p-4 rounded-lg border border-brand-200 dark:border-brand-800/30">
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Nombre</label>
+                                        <input
+                                            type="text"
+                                            value={editName}
+                                            onChange={(e) => setEditName(e.target.value)}
+                                            className="w-full p-2 text-sm border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Usuario</label>
+                                        <input
+                                            type="text"
+                                            value={editUsername}
+                                            onChange={(e) => setEditUsername(e.target.value)}
+                                            className="w-full p-2 text-sm border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Contraseña</label>
+                                        <input
+                                            type="text"
+                                            value={editPassword}
+                                            onChange={(e) => setEditPassword(e.target.value)}
+                                            placeholder="Nueva contraseña (opcional)"
+                                            className="w-full p-2 text-sm border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="text-xs font-semibold text-gray-500 mb-1 block">Rol</label>
+                                            <select
+                                                value={editRole}
+                                                onChange={(e) => setEditRole(e.target.value as UserRole)}
+                                                className="w-full p-2 text-sm border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                            >
+                                                {Object.values(UserRole).map(role => (
+                                                    <option key={role} value={role}>{role}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-semibold text-gray-500 mb-1 block">Ciudad</label>
+                                            <select
+                                                value={editCityId}
+                                                onChange={(e) => setEditCityId(e.target.value)}
+                                                className="w-full p-2 text-sm border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                            >
+                                                {cities.map(c => (
+                                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-2">
+                                        <label className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={editIsActive}
+                                                onChange={(e) => setEditIsActive(e.target.checked)}
+                                                className="w-4 h-4 text-brand-600 rounded focus:ring-brand-500"
+                                            />
+                                            <span className="text-sm font-medium">Activo</span>
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={handleSaveEdit}
+                                                className="flex items-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium"
+                                            >
+                                                <Check className="w-4 h-4" /> Guardar
+                                            </button>
+                                            <button
+                                                onClick={handleCancelEdit}
+                                                className="flex items-center gap-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-lg text-sm font-medium"
+                                            >
+                                                <X className="w-4 h-4" /> Cancelar
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => handleStartEdit(u)}
-                                        className="text-blue-500 p-1"
-                                    >
-                                        <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => onDeleteUser(u.id)}
-                                        className="text-red-500 p-1"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm flex-wrap">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300">
-                                    {u.role}
-                                </span>
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${u.isActive
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                                    }`}>
-                                    {u.isActive ? 'Activo' : 'Inactivo'}
-                                </span>
-                                <span className="text-gray-500 dark:text-gray-400">
-                                    {u.assignedCities.map(cid => cities.find(c => c.id === cid)?.name).join(', ')}
-                                </span>
-                            </div>
+                            ) : (
+                                // Mobile View Mode
+                                <>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <div className="font-semibold text-gray-900 dark:text-white">{u.name}</div>
+                                            <div className="text-sm text-gray-500 dark:text-gray-400">@{u.username}</div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleStartEdit(u)}
+                                                className="text-blue-500 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
+                                                title="Editar"
+                                            >
+                                                <Edit2 className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => onDeleteUser(u.id)}
+                                                className="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                                                title="Eliminar"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm flex-wrap">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300">
+                                            {u.role}
+                                        </span>
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${u.isActive
+                                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                                            }`}>
+                                            {u.isActive ? 'Activo' : 'Inactivo'}
+                                        </span>
+                                        <span className="text-gray-500 dark:text-gray-400">
+                                            {u.assignedCities.map(cid => cities.find(c => c.id === cid)?.name).join(', ')}
+                                        </span>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     ))}
                 </div>
