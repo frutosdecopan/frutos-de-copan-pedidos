@@ -597,7 +597,7 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
                             </div>
 
                             <div className="flex justify-end items-center border-t dark:border-gray-800 pt-3 gap-3">
-                                {(order.status === OrderStatus.DRAFT || order.status === OrderStatus.REVIEW) ? (
+                                {(order.status === OrderStatus.DRAFT || order.status === OrderStatus.SENT) ? (
                                     <button
                                         onClick={() => {
                                             console.log('Editing order:', order);
