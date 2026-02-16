@@ -245,6 +245,7 @@ const App = () => {
                 user={user}
                 orders={orders}
                 onSaveOrder={handleSaveOrder}
+                isDark={isDark}
               />
             )}
             {/* FALLBACK FOR SELLER IF DASHBOARD IS SET BUT ROLE IS SELLER */}
@@ -253,6 +254,7 @@ const App = () => {
                 user={user}
                 orders={orders}
                 onSaveOrder={handleSaveOrder}
+                isDark={isDark}
               />
             )}
 
@@ -303,6 +305,7 @@ const App = () => {
                 orders={orders}
                 onSaveOrder={handleSaveOrder}
                 editingOrderId={editingOrderId}
+                isDark={isDark}
               />
             )}
           </Suspense>
