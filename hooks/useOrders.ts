@@ -354,7 +354,7 @@ export function useOrders() {
         }
     };
 
-    // Subscribe to real-time changes
+    // Subscribe to real-time changes + polling fallback
     useEffect(() => {
         fetchOrders(0);
 
@@ -380,28 +380,37 @@ export function useOrders() {
 
                     if (!error && data) {
                         const transformed = transformOrder(data);
-                        setOrders(prev => [transformed, ...prev]);
+                        setOrders(prev => {
+                            // Avoid duplicates
+                            if (prev.some(o => o.id === transformed.id)) return prev;
+                            return [transformed, ...prev];
+                        });
                     }
                 } else if (eventType === 'UPDATE') {
-                    // For updates, we usually want to refresh the local state
-                    // Ideally we just update the specific field in the local array to avoid refetch
+                    const newRecord = payload.new as any;
                     setOrders(prev => prev.map(o => {
                         if (o.id === newRecord.id) {
-                            // Shallow merge for basic fields that might have changed
-                            // Note: deep nesting (items) might need a fetch if they changed
                             return { ...o, status: newRecord.status, assignedDeliveryId: newRecord.assigned_delivery_id, updatedAt: newRecord.updated_at };
                         }
                         return o;
                     }));
-
-                    // If it was a critical update (like status change that affects sorting), might want to re-sort
-                    // But usually timestamp sort is stable.
+                } else if (eventType === 'DELETE') {
+                    const oldRecord = payload.old as any;
+                    setOrders(prev => prev.filter(o => o.id !== oldRecord.id));
                 }
             })
-            .subscribe();
+            .subscribe((status) => {
+                console.log('[Realtime] orders_channel status:', status);
+            });
+
+        // Polling fallback: refresh every 30 seconds in case Realtime misses events
+        const pollInterval = setInterval(() => {
+            fetchOrders(0);
+        }, 30000);
 
         return () => {
             subscription.unsubscribe();
+            clearInterval(pollInterval);
         };
     }, []);
 

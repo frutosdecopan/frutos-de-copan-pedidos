@@ -98,8 +98,8 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
     };
 
 
-    const sellers = useMemo(() => users.filter(u => u.role === UserRole.SELLER), [users]);
-    const availableDeliveryUsers = useMemo(() => users.filter(u => u.role === UserRole.DELIVERY), [users]);
+    const sellers = useMemo(() => users.filter(u => u.role === UserRole.SELLER && u.isActive !== false), [users]);
+    const availableDeliveryUsers = useMemo(() => users.filter(u => u.role === UserRole.DELIVERY && u.isActive !== false), [users]);
 
     // --- FILTERING LOGIC --- (MUST be before skeleton return to maintain hooks count)
     const filteredOrders = useMemo(() => {

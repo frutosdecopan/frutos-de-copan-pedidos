@@ -124,6 +124,11 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
         handleCancelEdit();
     };
 
+    // Active users shown in full, inactive shown with reduced opacity so admins can still manage them
+    const activeUsers = users.filter(u => u.isActive !== false);
+    const inactiveUsers = users.filter(u => u.isActive === false);
+    const sortedUsers = [...activeUsers, ...inactiveUsers];
+
     return (
         <div className="p-4 md:p-6 max-w-6xl mx-auto">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Gestión de Usuarios</h1>
@@ -224,7 +229,7 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                            {users.map(u => (
+                            {sortedUsers.map(u => (
                                 editingUser?.id === u.id ? (
                                     // Edit Row
                                     <tr key={u.id} className="bg-brand-50 dark:bg-brand-900/10">
@@ -354,7 +359,7 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
 
                 {/* Mobile Cards */}
                 <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-800">
-                    {users.map(u => (
+                    {sortedUsers.map(u => (
                         <div key={u.id} className={`p-4 flex flex-col gap-3 ${!u.isActive && editingUser?.id !== u.id ? 'opacity-50' : ''}`}>
                             {editingUser?.id === u.id ? (
                                 // Mobile Edit Mode

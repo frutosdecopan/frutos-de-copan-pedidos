@@ -11,7 +11,7 @@ interface AvailabilityViewProps {
 
 export const AvailabilityView = ({ users, onUpdateUser }: AvailabilityViewProps) => {
     const { cities, loading: citiesLoading } = useCities();
-    const deliveryUsers = useMemo(() => users.filter(u => u.role === UserRole.DELIVERY), [users]);
+    const deliveryUsers = useMemo(() => users.filter(u => u.role === UserRole.DELIVERY && u.isActive !== false), [users]);
     const [selectedUserId, setSelectedUserId] = useState<string>('');
     const [dateInput, setDateInput] = useState('');
 
