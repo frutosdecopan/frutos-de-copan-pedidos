@@ -16,6 +16,8 @@ export function useOrders() {
         userId: order.user_id,
         userName: order.user_name,
         clientName: order.client_name,
+        clientRtn: order.client_rtn ?? undefined,
+        clientPhone: order.client_phone ?? undefined,
         originCityName: order.origin_city_name,
         orderType: order.order_type as OrderType,
         destinationName: order.destination_name,
@@ -153,6 +155,8 @@ export function useOrders() {
                     user_id: orderData.userId,
                     user_name: orderData.userName,
                     client_name: orderData.clientName,
+                    client_rtn: orderData.clientRtn || null,
+                    client_phone: orderData.clientPhone || null,
                     origin_city_name: orderData.originCityName,
                     order_type: orderData.orderType,
                     destination_name: orderData.destinationName,
@@ -247,6 +251,8 @@ export function useOrders() {
                 .from('orders')
                 .update({
                     client_name: orderData.clientName,
+                    client_rtn: orderData.clientRtn ?? null,
+                    client_phone: orderData.clientPhone ?? null,
                     destination_name: orderData.destinationName,
                     order_type: orderData.orderType,
                     warehouse_id: orderData.warehouseId,

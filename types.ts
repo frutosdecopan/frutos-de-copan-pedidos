@@ -53,6 +53,8 @@ export interface Order {
   userId: string;
   userName: string;
   clientName: string;
+  clientRtn?: string;    // RTN fiscal, máx 14 dígitos, opcional
+  clientPhone?: string;  // Teléfono de contacto, opcional
   originCityName: string; // Ciudad base del vendedor
 
   // Logistics

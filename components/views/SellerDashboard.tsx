@@ -123,6 +123,8 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
     const [selectedDestination, setSelectedDestination] = useState<string>('');
     const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(OrderType.SALE);
     const [clientName, setClientName] = useState('');
+    const [clientRtn, setClientRtn] = useState('');
+    const [clientPhone, setClientPhone] = useState('');
     const [cart, setCart] = useState<OrderItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [headerCollapsed, setHeaderCollapsed] = useState(false);
@@ -179,6 +181,8 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
     const resetForm = () => {
         setCart([]);
         setClientName('');
+        setClientRtn('');
+        setClientPhone('');
         setSelectedWarehouseId(availableWarehouses[0]?.warehouseId || '');
         setSelectedDestination(destinations[0]?.name || '');
         setSelectedOrderType(OrderType.SALE);
@@ -194,6 +198,8 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
     const handleEditOrder = (order: Order) => {
         setLocalEditingOrderId(order.id);
         setClientName(order.clientName);
+        setClientRtn(order.clientRtn || '');
+        setClientPhone(order.clientPhone || '');
         setSelectedWarehouseId(order.warehouseId);
         setSelectedDestination(order.destinationName || destinations[0]?.name || '');
         setSelectedOrderType(order.orderType || OrderType.SALE);
@@ -274,6 +280,8 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
             userId: user.id,
             userName: user.name,
             clientName: clientName,
+            clientRtn: clientRtn.trim() || undefined,
+            clientPhone: clientPhone.trim() || undefined,
             originCityName: originCityName,
             orderType: selectedOrderType,
             destinationName: selectedDestination,
@@ -347,6 +355,33 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
                                     value={clientName}
                                     onChange={(e) => setClientName(e.target.value)}
                                     placeholder="Ej: Supermercado La Colonia"
+                                    className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 bg-white dark:bg-gray-800"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">RTN <span className="text-gray-400">(opcional, máx. 14 dígitos)</span></label>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={clientRtn}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, '').slice(0, 14);
+                                        setClientRtn(val);
+                                    }}
+                                    placeholder="Ej: 08019999123456"
+                                    maxLength={14}
+                                    className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 bg-white dark:bg-gray-800"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Teléfono <span className="text-gray-400">(opcional)</span></label>
+                                <input
+                                    type="tel"
+                                    value={clientPhone}
+                                    onChange={(e) => setClientPhone(e.target.value)}
+                                    placeholder="Ej: 9999-1234"
                                     className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 bg-white dark:bg-gray-800"
                                 />
                             </div>
@@ -488,8 +523,8 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
                 <button
                     onClick={() => setActiveTab('active')}
                     className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'active'
-                            ? 'bg-white dark:bg-gray-700 shadow text-brand-600 dark:text-brand-400'
-                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                        ? 'bg-white dark:bg-gray-700 shadow text-brand-600 dark:text-brand-400'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                         }`}
                 >
                     Activos ({activeOrders.length})
@@ -497,8 +532,8 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
                 <button
                     onClick={() => setActiveTab('history')}
                     className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'history'
-                            ? 'bg-white dark:bg-gray-700 shadow text-brand-600 dark:text-brand-400'
-                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                        ? 'bg-white dark:bg-gray-700 shadow text-brand-600 dark:text-brand-400'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                         }`}
                 >
                     Historial ({historyOrders.length})
@@ -527,6 +562,12 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
                                         </span>
                                     </div>
                                     <h3 className="font-semibold text-gray-900 dark:text-white">{order.clientName}</h3>
+                                    {(order.clientRtn || order.clientPhone) && (
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                                            {order.clientRtn && <span>RTN: <span className="font-medium text-gray-700 dark:text-gray-300">{order.clientRtn}</span></span>}
+                                            {order.clientPhone && <span>Tel: <span className="font-medium text-gray-700 dark:text-gray-300">{order.clientPhone}</span></span>}
+                                        </div>
+                                    )}
                                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex flex-col gap-1">
                                         <span className="flex items-center"><MapPin className="w-3 h-3 mr-1" /> Destino: <span className="font-medium ml-1 text-gray-700 dark:text-gray-300">{order.destinationName}</span></span>
                                         <span className="flex items-center"><Package className="w-3 h-3 mr-1" /> Desde: {order.warehouseName}</span>
