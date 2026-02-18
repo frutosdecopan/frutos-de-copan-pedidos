@@ -27,6 +27,7 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
 
     const [mode, setMode] = useState<'list' | 'create'>('list');
     const [localEditingOrderId, setLocalEditingOrderId] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
 
     // Comments Modal State
     const [showCommentsModal, setShowCommentsModal] = useState(false);
@@ -153,6 +154,11 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
     const myOrders = useMemo(() =>
         orders.filter(o => o.userId === user.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
         [orders, user.id]);
+
+    const HISTORY_STATUSES = [OrderStatus.DELIVERED, OrderStatus.CANCELLED, OrderStatus.REJECTED];
+    const activeOrders = useMemo(() => myOrders.filter(o => !HISTORY_STATUSES.includes(o.status)), [myOrders]);
+    const historyOrders = useMemo(() => myOrders.filter(o => HISTORY_STATUSES.includes(o.status)), [myOrders]);
+    const displayOrders = activeTab === 'active' ? activeOrders : historyOrders;
 
     const originCityName = useMemo(() => {
         const city = cities.find(c => c.id === user.assignedCities[0]);
@@ -465,7 +471,7 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
 
     return (
         <div className="p-4 md:p-8 max-w-5xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-6">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                         {user.role === UserRole.WAREHOUSE ? 'Mis Transferencias' : 'Mis Pedidos'}
@@ -477,14 +483,38 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
                 </Button>
             </div>
 
+            {/* Tabs */}
+            <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl mb-6">
+                <button
+                    onClick={() => setActiveTab('active')}
+                    className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'active'
+                            ? 'bg-white dark:bg-gray-700 shadow text-brand-600 dark:text-brand-400'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                        }`}
+                >
+                    Activos ({activeOrders.length})
+                </button>
+                <button
+                    onClick={() => setActiveTab('history')}
+                    className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'history'
+                            ? 'bg-white dark:bg-gray-700 shadow text-brand-600 dark:text-brand-400'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                        }`}
+                >
+                    Historial ({historyOrders.length})
+                </button>
+            </div>
+
             <div className="space-y-4">
-                {myOrders.length === 0 ? (
+                {displayOrders.length === 0 ? (
                     <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
                         <ShoppingCart className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                        <p className="text-gray-500 dark:text-gray-400">No has realizado pedidos aún.</p>
+                        <p className="text-gray-500 dark:text-gray-400">
+                            {activeTab === 'active' ? 'No tienes pedidos activos.' : 'No hay pedidos en el historial.'}
+                        </p>
                     </div>
                 ) : (
-                    myOrders.map(order => (
+                    displayOrders.map(order => (
                         <div key={order.id} className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 hover:shadow-md transition-shadow">
                             <div className="flex justify-between items-start mb-4">
                                 <div>
