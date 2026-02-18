@@ -121,7 +121,7 @@ export function useUsers() {
         }
     };
 
-    // Subscribe to real-time changes
+    // Subscribe to real-time changes + polling fallback
     useEffect(() => {
         fetchUsers();
 
@@ -131,10 +131,18 @@ export function useUsers() {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
                 fetchUsers();
             })
-            .subscribe();
+            .subscribe((status) => {
+                console.log('[Realtime] users_channel status:', status);
+            });
+
+        // Polling fallback: refresh every 30 seconds in case Realtime misses events
+        const pollInterval = setInterval(() => {
+            fetchUsers();
+        }, 30000);
 
         return () => {
             subscription.unsubscribe();
+            clearInterval(pollInterval);
         };
     }, []);
 
