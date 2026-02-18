@@ -561,6 +561,16 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                                                     <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1" title="Vendedor">
                                                         <Users className="w-3 h-3" /> {order.userName}
                                                     </div>
+                                                    {(order.clientRtn || order.clientPhone) && (
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400 flex flex-col gap-0.5 mt-0.5 border-t border-gray-100 dark:border-gray-800 pt-1">
+                                                            {order.clientRtn && (
+                                                                <span>RTN: <span className="font-medium text-gray-700 dark:text-gray-300">{order.clientRtn}</span></span>
+                                                            )}
+                                                            {order.clientPhone && (
+                                                                <span>Tel: <span className="font-medium text-gray-700 dark:text-gray-300">{order.clientPhone}</span></span>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
