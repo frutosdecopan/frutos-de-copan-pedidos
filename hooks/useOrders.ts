@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Order, OrderStatus, OrderType } from '../types';
+import { Order, OrderStatus } from '../types';
 
 export function useOrders() {
     const [orders, setOrders] = useState<Order[]>([]);
@@ -19,7 +19,7 @@ export function useOrders() {
         clientRtn: order.client_rtn ?? undefined,
         clientPhone: order.client_phone ?? undefined,
         originCityName: order.origin_city_name,
-        orderType: order.order_type as OrderType,
+        orderType: order.order_type,
         destinationName: order.destination_name,
         cityId: order.city_id,
         cityName: order.city_name,
@@ -49,6 +49,7 @@ export function useOrders() {
             createdAt: comment.created_at
         })).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
         assignedDeliveryId: order.assigned_delivery_id,
+        deliveryDate: order.delivery_date ?? undefined,
     });
 
     // Fetch orders with pagination
@@ -165,6 +166,7 @@ export function useOrders() {
                     warehouse_id: orderData.warehouseId,
                     warehouse_name: orderData.warehouseName,
                     status: orderData.status || OrderStatus.SENT,
+                    delivery_date: orderData.deliveryDate || null,
                 })
                 .select()
                 .single();
@@ -259,6 +261,7 @@ export function useOrders() {
                     warehouse_name: orderData.warehouseName,
                     city_id: orderData.cityId,
                     city_name: orderData.cityName,
+                    delivery_date: orderData.deliveryDate ?? null,
                 })
                 .eq('id', orderId);
 

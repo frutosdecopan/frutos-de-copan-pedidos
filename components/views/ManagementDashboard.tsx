@@ -1,7 +1,8 @@
 import { FC, useState, useMemo } from 'react';
 import { ClipboardList, BarChart3, Users, Edit2, Truck, Search, Filter, Calendar, X, ChevronDown, ChevronUp, Clock, Download, MessageSquare, FileText } from 'lucide-react';
-import { User, Order, OrderStatus, UserRole, OrderType } from '../../types';
+import { User, Order, OrderStatus, UserRole } from '../../types';
 import { useCities } from '../../hooks/useCities';
+import { useOrderTypes } from '../../hooks/useOrderTypes';
 import { useToast } from '../../ToastContext';
 import { TypeBadge, StatusBadge, TableSkeleton, CardSkeleton } from '../common';
 import { OrderHistory } from '../orders/OrderHistory';
@@ -27,6 +28,7 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
 }) => {
     const { addToast } = useToast();
     const { cities, loading: citiesLoading } = useCities();
+    const { orderTypes } = useOrderTypes();
 
     // Basic Filters
     const [activeTab, setActiveTab] = useState<'orders' | 'consolidated'>('orders');
@@ -483,7 +485,7 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                                 className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white"
                             >
                                 <option value="all">Todos</option>
-                                {Object.values(OrderType).map(t => <option key={t} value={t}>{t}</option>)}
+                                {orderTypes.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
                             </select>
                         </div>
 

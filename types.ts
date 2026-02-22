@@ -58,7 +58,7 @@ export interface Order {
   originCityName: string; // Ciudad base del vendedor
 
   // Logistics
-  orderType: OrderType;
+  orderType: string; // Tipo de pedido dinámico desde Supabase
   destinationName: string; // Lugar de entrega (Villanueva, Tegucigalpa, etc.)
 
   // Fulfillment Warehouse (Where stock comes from)
@@ -74,6 +74,7 @@ export interface Order {
   logs: OrderLog[];
   comments?: OrderComment[];
   assignedDeliveryId?: string;
+  deliveryDate?: string; // Fecha programada de entrega 'YYYY-MM-DD'
 }
 
 export interface OrderLog {
