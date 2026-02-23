@@ -23,6 +23,66 @@ export const AdminDashboard = ({ orders, isDark, loading = false }: AdminDashboa
     const [loadingReport, setLoadingReport] = useState(false);
     const theme = isDark ? 'dark' : 'light';
 
+    // ── ALL HOOKS MUST BE BEFORE ANY EARLY RETURN ──────────────────────────
+    // Colors for charts
+    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+
+    // --- KPI Calculations ---
+    const kpis = useMemo(() => {
+        const totalOrders = orders.length;
+        const activeOrders = orders.filter(o => o.status !== OrderStatus.CANCELLED && o.status !== OrderStatus.DRAFT);
+        const completedOrders = orders.filter(o => o.status === OrderStatus.DELIVERED);
+        const pendingOrders = orders.filter(o => [OrderStatus.SENT, OrderStatus.REVIEW, OrderStatus.PRODUCTION, OrderStatus.DISPATCH].includes(o.status));
+
+        const totalVolume = activeOrders.reduce((sum, order) => {
+            return sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0);
+        }, 0);
+
+        const successRate = totalOrders > 0 ? Math.round((completedOrders.length / totalOrders) * 100) : 0;
+        const todayStr = new Date().toISOString().split('T')[0];
+        const createdToday = orders.filter(o => o.createdAt.startsWith(todayStr)).length;
+
+        return { totalOrders, totalVolume, activeCount: activeOrders.length, pendingCount: pendingOrders.length, successRate, createdToday };
+    }, [orders]);
+
+    // 1. Sales Trend (Last 7 days)
+    const trendData = useMemo(() => {
+        const days = 7;
+        const data = [];
+        for (let i = days - 1; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            const ordersOnDate = orders.filter(o => o.createdAt.startsWith(dateStr));
+            const volumeOnDate = ordersOnDate.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0);
+            data.push({
+                date: date.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' }),
+                orders: ordersOnDate.length,
+                volume: volumeOnDate
+            });
+        }
+        return data;
+    }, [orders]);
+
+    // 2. Product Mix (Top 5 Products)
+    const productMixData = useMemo(() => {
+        const counts: Record<string, number> = {};
+        orders.forEach(o => {
+            if (o.status === OrderStatus.CANCELLED || o.status === OrderStatus.DRAFT) return;
+            o.items.forEach(item => { counts[item.productName] = (counts[item.productName] || 0) + item.quantity; });
+        });
+        return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
+    }, [orders]);
+
+    // 3. Status Distribution
+    const statusData = useMemo(() => {
+        const counts: Record<string, number> = {};
+        orders.forEach(o => { counts[o.status] = (counts[o.status] || 0) + 1; });
+        return Object.values(OrderStatus).map(s => ({ name: s, value: counts[s] || 0 })).filter(d => d.value > 0);
+    }, [orders]);
+    // ── END HOOKS ───────────────────────────────────────────────────────────
+
+    // Early return AFTER all hooks
     if (loading) {
         return (
             <div className="p-6 space-y-6">
@@ -39,93 +99,11 @@ export const AdminDashboard = ({ orders, isDark, loading = false }: AdminDashboa
         );
     }
 
-    // Colors for charts
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
-
-    // --- KPI Calculations ---
-    const kpis = useMemo(() => {
-        const totalOrders = orders.length;
-        const activeOrders = orders.filter(o => o.status !== OrderStatus.CANCELLED && o.status !== OrderStatus.DRAFT);
-        const completedOrders = orders.filter(o => o.status === OrderStatus.DELIVERED);
-        const pendingOrders = orders.filter(o => [OrderStatus.SENT, OrderStatus.REVIEW, OrderStatus.PRODUCTION, OrderStatus.DISPATCH].includes(o.status));
-
-        // Total Volume (Sum of all item quantities in active orders)
-        const totalVolume = activeOrders.reduce((sum, order) => {
-            return sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0);
-        }, 0);
-
-        // Efficiency Rate
-        const successRate = totalOrders > 0 ? Math.round((completedOrders.length / totalOrders) * 100) : 0;
-
-        // Daily Trend (Orders today vs yesterday) - Pseudo calculation for demo
-        const todayStr = new Date().toISOString().split('T')[0];
-        const createdToday = orders.filter(o => o.createdAt.startsWith(todayStr)).length;
-
-        return {
-            totalOrders,
-            totalVolume,
-            activeCount: activeOrders.length,
-            pendingCount: pendingOrders.length,
-            successRate,
-            createdToday
-        };
-    }, [orders]);
-
-    // --- Chart Data Preparation ---
-
-    // 1. Sales Trend (Last 7 days)
-    const trendData = useMemo(() => {
-        const days = 7;
-        const data = [];
-        for (let i = days - 1; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
-            const ordersOnDate = orders.filter(o => o.createdAt.startsWith(dateStr));
-            const volumeOnDate = ordersOnDate.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0);
-
-            data.push({
-                date: date.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' }),
-                orders: ordersOnDate.length,
-                volume: volumeOnDate
-            });
-        }
-        return data;
-    }, [orders]);
-
-    // 2. Product Mix (Top 5 Products)
-    const productMixData = useMemo(() => {
-        const counts: Record<string, number> = {};
-        orders.forEach(o => {
-            if (o.status === OrderStatus.CANCELLED || o.status === OrderStatus.DRAFT) return;
-            o.items.forEach(item => {
-                counts[item.productName] = (counts[item.productName] || 0) + item.quantity;
-            });
-        });
-
-        return Object.entries(counts)
-            .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 5);
-    }, [orders]);
-
-    // 3. Status Distribution
-    const statusData = useMemo(() => {
-        const counts: Record<string, number> = {};
-        orders.forEach(o => {
-            counts[o.status] = (counts[o.status] || 0) + 1;
-        });
-        return Object.values(OrderStatus).map(s => ({
-            name: s,
-            value: counts[s] || 0
-        })).filter(d => d.value > 0);
-    }, [orders]);
-
     const handleGenerateReport = async () => {
         setLoadingReport(true);
         try {
             const result = await generateAiReport(orders);
-            setReport(result);
+            setReport(result ?? null);
         } catch (error) {
             console.error(error);
             addToast("Error generating AI report", 'error');

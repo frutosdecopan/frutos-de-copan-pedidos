@@ -53,9 +53,10 @@ export function useOrders() {
     });
 
     // Fetch orders with pagination
-    const fetchOrders = async (page = 0, append = false) => {
+    // silent=true skips the loading state (used for background polling)
+    const fetchOrders = async (page = 0, append = false, silent = false) => {
         try {
-            if (page === 0) setLoading(true); // Only show full loading on first page
+            if (page === 0 && !silent) setLoading(true);
 
             const from = page * PAGE_SIZE;
             const to = from + PAGE_SIZE - 1;
@@ -412,10 +413,10 @@ export function useOrders() {
                 console.log('[Realtime] orders_channel status:', status);
             });
 
-        // Polling fallback: refresh every 30 seconds in case Realtime misses events
+        // Polling fallback: refresh silently every 60 seconds (silent=true avoids loading flicker)
         const pollInterval = setInterval(() => {
-            fetchOrders(0);
-        }, 30000);
+            fetchOrders(0, false, true);
+        }, 60000);
 
         return () => {
             subscription.unsubscribe();
