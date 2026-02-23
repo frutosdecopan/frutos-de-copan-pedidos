@@ -1,5 +1,5 @@
 import { useState, Suspense, lazy, useEffect } from 'react';
-import { UserRole, OrderStatus, Order, User, OrderItem, City, OrderType } from './types';
+import { UserRole, OrderStatus, Order, User, OrderItem } from './types';
 import { useToast } from './ToastContext';
 import { useOrders } from './hooks/useOrders';
 import { useUsers } from './hooks/useUsers';
@@ -38,7 +38,7 @@ const App = () => {
   // Form State Lifted to App (for Management Dashboard editing)
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [clientName, setClientName] = useState('');
-  const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(OrderType.SALE);
+  const [selectedOrderType, setSelectedOrderType] = useState<string>('Venta');
   const [selectedDestination, setSelectedDestination] = useState<string>('');
   const [cart, setCart] = useState<OrderItem[]>([]);
 
@@ -52,7 +52,7 @@ const App = () => {
   const resetForm = () => {
     setEditingOrderId(null);
     setClientName('');
-    setSelectedOrderType(OrderType.SALE);
+    setSelectedOrderType('Venta');
     setSelectedDestination(destinations[0]?.name || '');
     setCart([]);
   };
