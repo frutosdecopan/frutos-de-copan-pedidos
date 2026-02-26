@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { BarChart3, Package, ClipboardList, Truck, Users, Calendar, Sun, Moon, LogOut, Settings } from 'lucide-react';
+import { BarChart3, BarChart2, Package, ClipboardList, Truck, Users, Calendar, Sun, Moon, LogOut, Settings } from 'lucide-react';
 import { User, UserRole } from '../../types';
 import { Logo } from '../common';
 
@@ -20,6 +20,7 @@ export const Sidebar: FC<SidebarProps> = ({ user, onLogout, activeView, setView,
         { id: 'delivery', icon: Truck, label: 'Mis Entregas', roles: [UserRole.DELIVERY] },
         { id: 'users', icon: Users, label: 'Usuarios', roles: [UserRole.ADMIN] },
         { id: 'availability', icon: Calendar, label: 'Disponibilidad', roles: [UserRole.ADMIN] },
+        { id: 'reports', icon: BarChart2, label: 'Reportes', roles: [UserRole.ADMIN] },
         { id: 'config', icon: Settings, label: 'Configuración', roles: [UserRole.ADMIN] },
     ];
 

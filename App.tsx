@@ -18,6 +18,7 @@ const SellerDashboard = lazy(() => import('./components/views/SellerDashboard').
 const AdminDashboard = lazy(() => import('./components/views/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const ManagementDashboard = lazy(() => import('./components/views/ManagementDashboard').then(m => ({ default: m.ManagementDashboard })));
 const ConfigurationView = lazy(() => import('./components/views/ConfigurationView').then(m => ({ default: m.ConfigurationView })));
+const ReportsView = lazy(() => import('./components/views/ReportsView').then(m => ({ default: m.ReportsView })));
 
 // Loading Component
 const LoadingFallback = () => (
@@ -29,7 +30,7 @@ const LoadingFallback = () => (
 const App = () => {
   const { addToast } = useToast();
   const [user, setUser] = useState<User | null>(null);
-  const [currentView, setCurrentView] = useState<'login' | 'dashboard' | 'new-order' | 'edit-order' | 'users' | 'delivery' | 'availability' | 'orders' | 'all-orders' | 'config'>('login');
+  const [currentView, setCurrentView] = useState<'login' | 'dashboard' | 'new-order' | 'edit-order' | 'users' | 'delivery' | 'availability' | 'orders' | 'all-orders' | 'config' | 'reports'>('login');
 
   const { isDark, toggleTheme } = useTheme();
   const { destinations } = useDestinations();
@@ -296,6 +297,9 @@ const App = () => {
             )}
             {currentView === 'config' && user && (
               <ConfigurationView user={user} />
+            )}
+            {currentView === 'reports' && user?.role === UserRole.ADMIN && (
+              <ReportsView orders={orders} isDark={isDark} />
             )}
 
             {/* GENERIC VIEWS (NEW/EDIT) */}
