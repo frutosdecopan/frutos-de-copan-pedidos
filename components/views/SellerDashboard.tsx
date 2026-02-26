@@ -766,7 +766,7 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
                             <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
                                 <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
                                     <MessageSquare className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                                    <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">Comentarios de Begaga</h4>
+                                    <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">Comentarios de Bodega</h4>
                                     <span className="text-xs text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">
                                         {selectedCommentsOrder.comments?.length || 0}
                                     </span>
@@ -798,7 +798,7 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
 
                                 <div className="p-3 border-t border-gray-100 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 rounded-b-xl">
                                     <p className="text-xs text-gray-500 dark:text-gray-400 text-center italic">
-                                        Solo lectura - Los comentarios son agregados por el equipo de Begaga
+                                        Solo lectura - Los comentarios son agregados por el equipo de Bodega
                                     </p>
                                 </div>
                             </div>

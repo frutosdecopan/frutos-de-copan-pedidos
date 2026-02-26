@@ -17,7 +17,7 @@ export const PresentationsConfig: FC = () => {
     const handleOpenModal = (presentation?: Presentation) => {
         if (presentation) {
             setEditingPresentation(presentation);
-            setFormData({ name: presentation.name, weight_kg: presentation.weightKg });
+            setFormData({ name: presentation.name, weight_kg: presentation.weight_kg });
         } else {
             setEditingPresentation(null);
             setFormData({ name: '', weight_kg: 0 });
@@ -39,8 +39,8 @@ export const PresentationsConfig: FC = () => {
         }
 
         const result = editingPresentation
-            ? await updatePresentation(editingPresentation.id, { name: formData.name, weightKg: formData.weight_kg })
-            : await createPresentation({ name: formData.name, weightKg: formData.weight_kg });
+            ? await updatePresentation(editingPresentation.id, { name: formData.name, weight_kg: formData.weight_kg })
+            : await createPresentation({ name: formData.name, weight_kg: formData.weight_kg });
 
         if (result.success) {
             addToast(editingPresentation ? 'Presentación actualizada' : 'Presentación creada', 'success');
@@ -95,7 +95,7 @@ export const PresentationsConfig: FC = () => {
                             {presentations.map(pres => (
                                 <tr key={pres.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{pres.name}</td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{pres.weightKg} kg</td>
+                                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{pres.weight_kg} kg</td>
                                     <td className="px-4 py-3 text-right">
                                         <div className="flex justify-end gap-2">
                                             <button onClick={() => handleOpenModal(pres)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg">

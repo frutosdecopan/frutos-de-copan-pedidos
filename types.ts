@@ -37,7 +37,7 @@ export interface Product {
 export interface Presentation {
   id: string;
   name: string; // e.g., 'Libra', 'Medio Galón', 'Galón'
-  weightKg: number; // For logic if needed later
+  weight_kg: number;
 }
 
 export interface OrderItem {

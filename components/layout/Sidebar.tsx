@@ -19,7 +19,7 @@ export const Sidebar: FC<SidebarProps> = ({ user, onLogout, activeView, setView,
         { id: 'all-orders', icon: ClipboardList, label: 'Gestión Pedidos', roles: [UserRole.ADMIN, UserRole.PRODUCTION, UserRole.WAREHOUSE] },
         { id: 'delivery', icon: Truck, label: 'Mis Entregas', roles: [UserRole.DELIVERY] },
         { id: 'users', icon: Users, label: 'Usuarios', roles: [UserRole.ADMIN] },
-        { id: 'availability', icon: Calendar, label: 'Disponibilidad', roles: [UserRole.ADMIN, UserRole.WAREHOUSE] },
+        { id: 'availability', icon: Calendar, label: 'Disponibilidad', roles: [UserRole.ADMIN] },
         { id: 'config', icon: Settings, label: 'Configuración', roles: [UserRole.ADMIN] },
     ];
 
