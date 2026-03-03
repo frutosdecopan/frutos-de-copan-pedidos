@@ -97,7 +97,8 @@ export interface User {
   name: string;
   username: string;
   password: string;
-  role: UserRole;
+  role: UserRole;            // Rol primario (primer elemento de roles, para retrocompatibilidad)
+  roles: UserRole[];         // Lista completa de roles asignados
   assignedCities: string[]; // IDs of cities
   unavailableDates?: string[]; // Array de strings 'YYYY-MM-DD' para vacaciones/bajas
   isActive: boolean;

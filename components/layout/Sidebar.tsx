@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { BarChart3, BarChart2, Package, ClipboardList, Truck, Users, Calendar, Sun, Moon, LogOut, Settings } from 'lucide-react';
+import { BarChart3, BarChart2, Package, ClipboardList, Truck, Users, Calendar, Sun, Moon, LogOut, Settings, RefreshCw } from 'lucide-react';
 import { User, UserRole } from '../../types';
 import { Logo } from '../common';
 
@@ -10,9 +10,10 @@ interface SidebarProps {
     setView: (view: string) => void;
     toggleTheme: () => void;
     isDark: boolean;
+    onSwitchRole?: () => void; // Para usuarios multi-rol: volver al selector de modo
 }
 
-export const Sidebar: FC<SidebarProps> = ({ user, onLogout, activeView, setView, toggleTheme, isDark }) => {
+export const Sidebar: FC<SidebarProps> = ({ user, onLogout, activeView, setView, toggleTheme, isDark, onSwitchRole }) => {
     const menuItems = [
         { id: 'dashboard', icon: BarChart3, label: 'Dashboard', roles: [UserRole.ADMIN, UserRole.PRODUCTION, UserRole.WAREHOUSE] },
         { id: 'orders', icon: Package, label: user.role === UserRole.WAREHOUSE ? 'Mis Transferencias' : 'Mis Pedidos', roles: [UserRole.SELLER, UserRole.WAREHOUSE] },
@@ -24,7 +25,7 @@ export const Sidebar: FC<SidebarProps> = ({ user, onLogout, activeView, setView,
         { id: 'config', icon: Settings, label: 'Configuración', roles: [UserRole.ADMIN] },
     ];
 
-    const visibleItems = menuItems.filter(i => i.roles.includes(user.role));
+    const visibleItems = menuItems.filter(i => i.roles.some(r => user.roles.includes(r)));
 
     if (visibleItems.length === 0) return null;
 
@@ -65,6 +66,15 @@ export const Sidebar: FC<SidebarProps> = ({ user, onLogout, activeView, setView,
                     </div>
 
                     <div className="flex gap-2">
+                        {onSwitchRole && (
+                            <button
+                                onClick={onSwitchRole}
+                                className="flex-1 flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                title="Cambiar modo de rol"
+                            >
+                                <RefreshCw className="w-4 h-4" />
+                            </button>
+                        )}
                         <button
                             onClick={toggleTheme}
                             className="flex-1 flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"

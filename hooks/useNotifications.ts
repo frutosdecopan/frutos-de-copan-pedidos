@@ -118,9 +118,9 @@ export function useNotifications(user: User | null) {
                     // 1. BODEGA / ADMIN — Nuevo pedido recibido (INSERT)
                     if (eventType === 'INSERT') {
                         const isRelevant =
-                            user.role === UserRole.ADMIN ||
-                            (user.role === UserRole.WAREHOUSE && user.assignedCities.includes(newOrder.city_id)) ||
-                            (user.role === UserRole.PRODUCTION && user.assignedCities.includes(newOrder.city_id));
+                            user.roles.includes(UserRole.ADMIN) ||
+                            (user.roles.includes(UserRole.WAREHOUSE) && user.assignedCities.includes(newOrder.city_id)) ||
+                            (user.roles.includes(UserRole.PRODUCTION) && user.assignedCities.includes(newOrder.city_id));
 
                         if (isRelevant) {
                             addToast(`📦 Nuevo pedido recibido: ${newOrder.client_name}`, 'info');
@@ -129,7 +129,7 @@ export function useNotifications(user: User | null) {
                     }
 
                     // 2. VENDEDOR — Cambio de estado en sus pedidos
-                    if (eventType === 'UPDATE' && user.role === UserRole.SELLER) {
+                    if (eventType === 'UPDATE' && user.roles.includes(UserRole.SELLER)) {
                         if (user.id === newOrder.user_id && newOrder.status !== oldOrder.status) {
                             let msg = `Tu pedido para ${newOrder.client_name} ahora está: ${newOrder.status}`;
                             let type: 'success' | 'error' | 'info' = 'info';
@@ -140,7 +140,7 @@ export function useNotifications(user: User | null) {
                     }
 
                     // 3. REPARTIDOR — Pedido asignado
-                    if (eventType === 'UPDATE' && user.role === UserRole.DELIVERY) {
+                    if (eventType === 'UPDATE' && user.roles.includes(UserRole.DELIVERY)) {
                         if (
                             newOrder.assigned_delivery_id === user.id &&
                             oldOrder.assigned_delivery_id !== user.id

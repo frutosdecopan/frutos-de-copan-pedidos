@@ -19,18 +19,25 @@ export function useUsers() {
             if (error) throw error;
 
             // Transform Supabase data to match our User type
-            const transformedUsers: User[] = (data || []).map((user: any) => ({
-                id: user.id,
-                name: user.name,
-                username: user.username || '',
-                password: user.password || '',
-                role: user.role as UserRole,
-                assignedCities: user.assigned_cities || [],
-                unavailableDates: user.unavailable_dates?.map((d: any) =>
-                    typeof d === 'string' ? d : new Date(d).toISOString().split('T')[0]
-                ) || [],
-                isActive: user.is_active !== false,
-            }));
+            const transformedUsers: User[] = (data || []).map((user: any) => {
+                // Compute roles array: prefer stored roles[], fallback to [role]
+                const rolesArr: UserRole[] = (Array.isArray(user.roles) && user.roles.length > 0)
+                    ? user.roles as UserRole[]
+                    : [user.role as UserRole];
+                return {
+                    id: user.id,
+                    name: user.name,
+                    username: user.username || '',
+                    password: user.password || '',
+                    role: rolesArr[0],                // Rol primario
+                    roles: rolesArr,                  // Todos los roles
+                    assignedCities: user.assigned_cities || [],
+                    unavailableDates: user.unavailable_dates?.map((d: any) =>
+                        typeof d === 'string' ? d : new Date(d).toISOString().split('T')[0]
+                    ) || [],
+                    isActive: user.is_active !== false,
+                };
+            });
 
             setUsers(transformedUsers);
             setError(null);
@@ -45,6 +52,7 @@ export function useUsers() {
     // Create new user
     const createUser = async (userData: Omit<User, 'id'>) => {
         try {
+            const rolesArr = (userData.roles && userData.roles.length > 0) ? userData.roles : [userData.role];
             const { data, error } = await supabase
                 .from('users')
                 .insert({
@@ -52,7 +60,8 @@ export function useUsers() {
                     username: userData.username,
                     password: userData.password,
                     email: `${userData.username}@frutos.com`,
-                    role: userData.role,
+                    role: rolesArr[0],                 // rol primario
+                    roles: rolesArr,                   // todos los roles
                     assigned_cities: (userData.assignedCities || []).filter(id => id && id.trim() !== ''),
                     unavailable_dates: userData.unavailableDates || [],
                     is_active: userData.isActive !== false,
@@ -79,7 +88,14 @@ export function useUsers() {
             if (userData.name) updateData.name = userData.name;
             if (userData.username) updateData.username = userData.username;
             if (userData.password) updateData.password = userData.password;
-            if (userData.role) updateData.role = userData.role;
+            // Persist roles array; derive primary role from it
+            if (userData.roles && userData.roles.length > 0) {
+                updateData.roles = userData.roles;
+                updateData.role = userData.roles[0];
+            } else if (userData.role) {
+                updateData.role = userData.role;
+                updateData.roles = [userData.role];
+            }
             if (userData.assignedCities) {
                 updateData.assigned_cities = (userData.assignedCities || []).filter(id => id && id.trim() !== '');
             }

@@ -20,9 +20,15 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
     const [newName, setNewName] = useState('');
     const [newUsername, setNewUsername] = useState('');
     const [newPassword, setNewPassword] = useState('');
-    const [newRole, setNewRole] = useState<UserRole>(UserRole.SELLER);
+    const [newRoles, setNewRoles] = useState<UserRole[]>([UserRole.SELLER]);
     const [newCityId, setNewCityId] = useState<string>(cities[0]?.id || '');
     const [newIsActive, setNewIsActive] = useState(true);
+
+    const toggleNewRole = (role: UserRole) => {
+        setNewRoles(prev =>
+            prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
+        );
+    };
 
     // Update default city when cities load
     useEffect(() => {
@@ -36,9 +42,15 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
     const [editName, setEditName] = useState('');
     const [editUsername, setEditUsername] = useState('');
     const [editPassword, setEditPassword] = useState('');
-    const [editRole, setEditRole] = useState<UserRole>(UserRole.SELLER);
+    const [editRoles, setEditRoles] = useState<UserRole[]>([UserRole.SELLER]);
     const [editCityId, setEditCityId] = useState<string>('');
     const [editIsActive, setEditIsActive] = useState(true);
+
+    const toggleEditRole = (role: UserRole) => {
+        setEditRoles(prev =>
+            prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
+        );
+    };
 
     const handleAdd = () => {
         if (!newName.trim() || !newUsername.trim() || !newPassword.trim()) {
@@ -48,6 +60,11 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
 
         if (newPassword.length < 6) {
             addToast('La contraseña debe tener al menos 6 caracteres', 'error');
+            return;
+        }
+
+        if (newRoles.length === 0) {
+            addToast('Selecciona al menos un rol', 'error');
             return;
         }
 
@@ -61,7 +78,8 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
             name: newName,
             username: newUsername,
             password: newPassword,
-            role: newRole,
+            role: newRoles[0],
+            roles: newRoles,
             assignedCities: [newCityId],
             unavailableDates: [],
             isActive: newIsActive
@@ -70,6 +88,7 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
         setNewName('');
         setNewUsername('');
         setNewPassword('');
+        setNewRoles([UserRole.SELLER]);
         setNewIsActive(true);
     };
 
@@ -78,7 +97,7 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
         setEditName(user.name);
         setEditUsername(user.username);
         setEditPassword(''); // Don't show password
-        setEditRole(user.role);
+        setEditRoles(user.roles && user.roles.length > 0 ? user.roles : [user.role]);
         setEditCityId(user.assignedCities[0] || cities[0]?.id || '');
         setEditIsActive(user.isActive);
     };
@@ -110,12 +129,18 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
             return;
         }
 
+        if (editRoles.length === 0) {
+            addToast('Selecciona al menos un rol', 'error');
+            return;
+        }
+
         const updatedUser: User = {
             ...editingUser,
             name: editName,
             username: editUsername,
             password: editPassword || editingUser.password, // Keep old password if not changed
-            role: editRole,
+            role: editRoles[0],
+            roles: editRoles,
             assignedCities: [editCityId],
             isActive: editIsActive
         };
@@ -171,16 +196,23 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Rol</label>
-                        <select
-                            value={newRole}
-                            onChange={(e) => setNewRole(e.target.value as UserRole)}
-                            className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-brand-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                        >
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Roles</label>
+                        <div className="flex flex-wrap gap-2">
                             {Object.values(UserRole).map(role => (
-                                <option key={role} value={role}>{role}</option>
+                                <label key={role} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border cursor-pointer text-xs font-medium transition-colors ${newRoles.includes(role)
+                                        ? 'bg-brand-600 text-white border-brand-600'
+                                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:border-brand-400'
+                                    }`}>
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only"
+                                        checked={newRoles.includes(role)}
+                                        onChange={() => toggleNewRole(role)}
+                                    />
+                                    {role}
+                                </label>
                             ))}
-                        </select>
+                        </div>
                     </div>
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Ciudad Asignada</label>
@@ -206,7 +238,7 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
                         </label>
                     </div>
                     <div className="lg:col-span-2 flex items-end">
-                        <Button onClick={handleAdd} disabled={!newName || !newUsername || !newPassword} className="w-full">
+                        <Button onClick={handleAdd} disabled={!newName || !newUsername || !newPassword || newRoles.length === 0} className="w-full">
                             <Plus className="w-4 h-4 mr-1" /> Agregar
                         </Button>
                     </div>
@@ -259,15 +291,17 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
                                             />
                                         </td>
                                         <td className="px-6 py-4">
-                                            <select
-                                                value={editRole}
-                                                onChange={(e) => setEditRole(e.target.value as UserRole)}
-                                                className="w-full p-1.5 text-sm border border-gray-300 dark:border-gray-700 rounded focus:ring-2 focus:ring-brand-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                            >
+                                            <div className="flex flex-wrap gap-1">
                                                 {Object.values(UserRole).map(role => (
-                                                    <option key={role} value={role}>{role}</option>
+                                                    <label key={role} className={`flex items-center gap-1 px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-colors ${editRoles.includes(role)
+                                                            ? 'bg-brand-600 text-white border-brand-600'
+                                                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+                                                        }`}>
+                                                        <input type="checkbox" className="sr-only" checked={editRoles.includes(role)} onChange={() => toggleEditRole(role)} />
+                                                        {role}
+                                                    </label>
                                                 ))}
-                                            </select>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <select
@@ -317,9 +351,13 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
                                         <td className="px-6 py-4 text-gray-700 dark:text-gray-300">{u.username}</td>
                                         <td className="px-6 py-4 text-gray-700 dark:text-gray-300 font-mono text-sm">{u.password}</td>
                                         <td className="px-6 py-4">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 border dark:border-gray-700">
-                                                {u.role}
-                                            </span>
+                                            <div className="flex flex-wrap gap-1">
+                                                {(u.roles && u.roles.length > 0 ? u.roles : [u.role]).map(r => (
+                                                    <span key={r} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 border dark:border-gray-700">
+                                                        {r}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-gray-500 dark:text-gray-400">
                                             {u.assignedCities.map(cid => cities.find(c => c.id === cid)?.name).join(', ')}
@@ -394,16 +432,18 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <label className="text-xs font-semibold text-gray-500 mb-1 block">Rol</label>
-                                            <select
-                                                value={editRole}
-                                                onChange={(e) => setEditRole(e.target.value as UserRole)}
-                                                className="w-full p-2 text-sm border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                            >
+                                            <label className="text-xs font-semibold text-gray-500 mb-1 block">Roles</label>
+                                            <div className="flex flex-wrap gap-1">
                                                 {Object.values(UserRole).map(role => (
-                                                    <option key={role} value={role}>{role}</option>
+                                                    <label key={role} className={`flex items-center gap-1 px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-colors ${editRoles.includes(role)
+                                                            ? 'bg-brand-600 text-white border-brand-600'
+                                                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+                                                        }`}>
+                                                        <input type="checkbox" className="sr-only" checked={editRoles.includes(role)} onChange={() => toggleEditRole(role)} />
+                                                        {role}
+                                                    </label>
                                                 ))}
-                                            </select>
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="text-xs font-semibold text-gray-500 mb-1 block">Ciudad</label>
@@ -470,9 +510,11 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 text-sm flex-wrap">
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300">
-                                            {u.role}
-                                        </span>
+                                        {(u.roles && u.roles.length > 0 ? u.roles : [u.role]).map(r => (
+                                            <span key={r} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300">
+                                                {r}
+                                            </span>
+                                        ))}
                                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${u.isActive
                                             ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                                             : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'

@@ -1,5 +1,6 @@
 import { useState, Suspense, lazy, useEffect } from 'react';
 import { UserRole, OrderStatus, Order, User, OrderItem } from './types';
+import { BarChart3, Package, ClipboardList, Truck, Users, Calendar, BarChart2, Settings } from 'lucide-react';
 import { useToast } from './ToastContext';
 import { useOrders } from './hooks/useOrders';
 import { useUsers } from './hooks/useUsers';
@@ -27,9 +28,65 @@ const LoadingFallback = () => (
   </div>
 );
 
+// ─── Role Picker Screen ──────────────────────────────────────────────────────
+const ROLE_ICONS: Record<string, any> = {
+  [UserRole.SELLER]: Package,
+  [UserRole.WAREHOUSE]: ClipboardList,
+  [UserRole.PRODUCTION]: BarChart3,
+  [UserRole.ADMIN]: Users,
+  [UserRole.DELIVERY]: Truck,
+};
+const ROLE_FIRST_VIEW: Record<string, string> = {
+  [UserRole.SELLER]: 'orders',
+  [UserRole.WAREHOUSE]: 'all-orders',
+  [UserRole.PRODUCTION]: 'all-orders',
+  [UserRole.ADMIN]: 'dashboard',
+  [UserRole.DELIVERY]: 'delivery',
+};
+
+interface RolePickerProps {
+  user: User;
+  onSelectRole: (role: UserRole) => void;
+}
+const RolePicker = ({ user, onSelectRole }: RolePickerProps) => (
+  <div className="min-h-screen bg-brand-50 dark:bg-gray-900 flex items-center justify-center p-4">
+    <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-transparent dark:border-gray-800 overflow-hidden">
+      <div className="bg-brand-600 p-6 text-center">
+        <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+          <span className="text-2xl font-bold text-white">{user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}</span>
+        </div>
+        <h1 className="text-xl font-bold text-white">{user.name}</h1>
+        <p className="text-brand-100 text-sm mt-1">Bienvenido/a — ¿Con qué rol deseas operar hoy?</p>
+      </div>
+      <div className="p-6 space-y-3">
+        {user.roles.map(role => {
+          const Icon = ROLE_ICONS[role] ?? Package;
+          return (
+            <button
+              key={role}
+              onClick={() => onSelectRole(role)}
+              className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 dark:hover:border-brand-500 transition-all group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 group-hover:bg-brand-100 dark:group-hover:bg-brand-900/40 flex items-center justify-center transition-colors">
+                <Icon className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400" />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-gray-900 dark:text-white group-hover:text-brand-700 dark:group-hover:text-brand-300">{role}</p>
+              </div>
+              <svg className="ml-auto w-5 h-5 text-gray-400 group-hover:text-brand-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+);
+// ─────────────────────────────────────────────────────────────────────────────
+
 const App = () => {
   const { addToast } = useToast();
   const [user, setUser] = useState<User | null>(null);
+  const [activeRole, setActiveRole] = useState<UserRole | null>(null); // Rol activo para la sesión
   const [currentView, setCurrentView] = useState<'login' | 'dashboard' | 'new-order' | 'edit-order' | 'users' | 'delivery' | 'availability' | 'orders' | 'all-orders' | 'config' | 'reports'>('login');
 
   const { isDark, toggleTheme } = useTheme();
@@ -93,13 +150,26 @@ const App = () => {
 
   const handleLogin = (u: User) => {
     setUser(u);
-    // Set default view based on role
-    setCurrentView('dashboard');
+    if (u.roles.length > 1) {
+      // Multi-role: mostrar pantalla de selección
+      setActiveRole(null);
+    } else {
+      // Single role: entrar directamente
+      const singleRole = u.roles[0] ?? u.role;
+      setActiveRole(singleRole);
+      setCurrentView((ROLE_FIRST_VIEW[singleRole] as any) ?? 'dashboard');
+    }
   };
 
   const handleLogout = () => {
     setUser(null);
+    setActiveRole(null);
     setCurrentView('login');
+  };
+
+  const handleSelectRole = (role: UserRole) => {
+    setActiveRole(role);
+    setCurrentView((ROLE_FIRST_VIEW[role] as any) ?? 'dashboard');
   };
 
   const handleSaveOrder = async (order: Partial<Order>, isEdit: boolean = false) => {
@@ -109,7 +179,7 @@ const App = () => {
         addToast('Pedido actualizado correctamente', 'success');
         resetForm();
         // If editing from management dashboard, return to management view
-        if (user && (user.role === UserRole.WAREHOUSE || user.role === UserRole.ADMIN || user.role === UserRole.PRODUCTION)) {
+        if (user && (user.roles.includes(UserRole.WAREHOUSE) || user.roles.includes(UserRole.ADMIN) || user.roles.includes(UserRole.PRODUCTION))) {
           setCurrentView('all-orders');
         } else {
           setCurrentView('dashboard');
@@ -219,21 +289,33 @@ const App = () => {
     );
   }
 
+  // Usuario con múltiples roles y aún no ha seleccionado modo
+  if (user.roles.length > 1 && !activeRole) {
+    return <RolePicker user={user} onSelectRole={handleSelectRole} />;
+  }
+
+  // Vista de usuario con rol activo seleccionado
+  // Creamos un objeto de usuario con solo el rol activo para filtrar el sidebar correctamente
+  const sessionUser: User = activeRole
+    ? { ...user, role: activeRole, roles: [activeRole] }
+    : user;
+
   return (
     <div className={`min-h-screen transition-colors bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-50 font-sans`}>
       <Sidebar
-        user={user}
+        user={sessionUser}
         onLogout={handleLogout}
         activeView={currentView}
         setView={(view: string) => setCurrentView(view as any)}
         toggleTheme={toggleTheme}
         isDark={isDark}
+        onSwitchRole={user.roles.length > 1 ? () => setActiveRole(null) : undefined}
       />
 
       <div className="sm:ml-64 pt-14 sm:pt-0 pb-20 sm:pb-0 min-h-screen">
         <div key={currentView} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           <Suspense fallback={<LoadingFallback />}>
-            {currentView === 'dashboard' && user.role !== UserRole.SELLER && user.role !== UserRole.DELIVERY && (
+            {currentView === 'dashboard' && !sessionUser.roles.includes(UserRole.SELLER) && !sessionUser.roles.includes(UserRole.DELIVERY) && (
               <AdminDashboard
                 orders={orders}
                 isDark={isDark}
@@ -250,7 +332,7 @@ const App = () => {
               />
             )}
             {/* FALLBACK FOR SELLER IF DASHBOARD IS SET BUT ROLE IS SELLER */}
-            {currentView === 'dashboard' && user.role === UserRole.SELLER && (
+            {currentView === 'dashboard' && sessionUser.roles.includes(UserRole.SELLER) && (
               <SellerDashboard
                 user={user}
                 orders={orders}
@@ -298,7 +380,7 @@ const App = () => {
             {currentView === 'config' && user && (
               <ConfigurationView user={user} />
             )}
-            {currentView === 'reports' && user?.role === UserRole.ADMIN && (
+            {currentView === 'reports' && sessionUser?.roles.includes(UserRole.ADMIN) && (
               <ReportsView orders={orders} isDark={isDark} />
             )}
 
