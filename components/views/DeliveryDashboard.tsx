@@ -11,16 +11,24 @@ interface DeliveryDashboardProps {
 }
 
 export const DeliveryDashboard: FC<DeliveryDashboardProps> = ({ user, orders, onUpdateStatus }) => {
-    const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
+    const [activeTab, setActiveTab] = useState<'pre' | 'pending' | 'history'>('pre');
 
     const myOrders = useMemo(() => {
         return orders.filter(o => o.assignedDeliveryId === user.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }, [orders, user.id]);
 
+    // Pedidos asignados pero aún no en despacho (bodega debe verificar y cambiar a DISPATCH)
+    const preDispatchOrders = myOrders.filter(o =>
+        o.status !== OrderStatus.DISPATCH &&
+        o.status !== OrderStatus.DELIVERED &&
+        o.status !== OrderStatus.CANCELLED &&
+        o.status !== OrderStatus.REJECTED
+    );
     const pendingOrders = myOrders.filter(o => o.status === OrderStatus.DISPATCH);
     const historyOrders = myOrders.filter(o => o.status === OrderStatus.DELIVERED);
 
-    const displayOrders = activeTab === 'pending' ? pendingOrders : historyOrders;
+    const displayOrders = activeTab === 'pending' ? pendingOrders : activeTab === 'pre' ? preDispatchOrders : historyOrders;
+
 
     return (
         <div className="p-4 max-w-lg mx-auto pb-24">
@@ -36,6 +44,12 @@ export const DeliveryDashboard: FC<DeliveryDashboardProps> = ({ user, orders, on
 
             <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl mb-6">
                 <button
+                    onClick={() => setActiveTab('pre')}
+                    className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'pre' ? 'bg-white dark:bg-gray-700 shadow text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-gray-400'}`}
+                >
+                    Por Verificar {preDispatchOrders.length > 0 && <span className="ml-1 bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{preDispatchOrders.length}</span>}
+                </button>
+                <button
                     onClick={() => setActiveTab('pending')}
                     className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'pending' ? 'bg-white dark:bg-gray-700 shadow text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400'}`}
                 >
@@ -50,6 +64,12 @@ export const DeliveryDashboard: FC<DeliveryDashboardProps> = ({ user, orders, on
             </div>
 
             <div className="space-y-4">
+                {activeTab === 'pre' && preDispatchOrders.length > 0 && (
+                    <div className="flex items-start gap-2 px-4 py-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl text-xs text-orange-700 dark:text-orange-300">
+                        <span className="text-base leading-none mt-0.5">📦</span>
+                        <p>Estos pedidos están asignados a ti. <strong>Verifica que los productos estén en tu vehículo.</strong> Bodega los pasará a "En Ruta" cuando estén listos para salir.</p>
+                    </div>
+                )}
                 {displayOrders.length === 0 ? (
                     <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
                         <Package className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
