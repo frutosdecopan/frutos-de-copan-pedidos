@@ -71,13 +71,24 @@ export const DeliveryDashboard: FC<DeliveryDashboardProps> = ({ user, orders, on
                                 </a>
                             </div>
                             <div className="p-4">
-                                <div className="mb-4 text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                                <div className="mb-3 text-sm text-gray-600 dark:text-gray-300">
                                     <p className="flex items-center"><span className="w-20 text-gray-400">Destino:</span> {order.destinationName}</p>
-                                    <p className="flex items-center"><span className="w-20 text-gray-400">Items:</span> {order.items.length} productos</p>
                                 </div>
 
-                                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-xs text-gray-500 dark:text-gray-400 mb-4">
-                                    {order.items.map(i => `${i.quantity} ${i.presentationName} ${i.productName}`).join(', ')}
+                                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 mb-4">
+                                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Productos ({order.items.length})</div>
+                                    <div className="space-y-1">
+                                        {order.items.map((item, idx) => (
+                                            <div key={idx} className="flex justify-between items-center text-sm">
+                                                <span className="text-gray-700 dark:text-gray-300">
+                                                    <span className="font-semibold text-brand-600 dark:text-brand-400">{item.quantity}x</span> {item.presentationName} de {item.productName}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+                                        Total unidades: <span className="font-semibold text-gray-700 dark:text-gray-300">{order.items.reduce((sum, item) => sum + item.quantity, 0)}</span>
+                                    </div>
                                 </div>
 
                                 {activeTab === 'pending' && (
