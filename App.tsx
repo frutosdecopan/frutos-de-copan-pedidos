@@ -20,6 +20,7 @@ const AdminDashboard = lazy(() => import('./components/views/AdminDashboard').th
 const ManagementDashboard = lazy(() => import('./components/views/ManagementDashboard').then(m => ({ default: m.ManagementDashboard })));
 const ConfigurationView = lazy(() => import('./components/views/ConfigurationView').then(m => ({ default: m.ConfigurationView })));
 const ReportsView = lazy(() => import('./components/views/ReportsView').then(m => ({ default: m.ReportsView })));
+const HelpView = lazy(() => import('./components/views/HelpView').then(m => ({ default: m.HelpView })));
 
 // Loading Component
 const LoadingFallback = () => (
@@ -87,7 +88,7 @@ const App = () => {
   const { addToast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [activeRole, setActiveRole] = useState<UserRole | null>(null); // Rol activo para la sesión
-  const [currentView, setCurrentView] = useState<'login' | 'dashboard' | 'new-order' | 'edit-order' | 'users' | 'delivery' | 'availability' | 'orders' | 'all-orders' | 'config' | 'reports'>('login');
+  const [currentView, setCurrentView] = useState<'login' | 'dashboard' | 'new-order' | 'edit-order' | 'users' | 'delivery' | 'availability' | 'orders' | 'all-orders' | 'config' | 'reports' | 'help'>('login');
 
   const { isDark, toggleTheme } = useTheme();
   const { destinations } = useDestinations();
@@ -325,7 +326,7 @@ const App = () => {
             {/* SELLER DASHBOARD */}
             {currentView === 'orders' && (
               <SellerDashboard
-                user={user}
+                user={sessionUser}
                 orders={orders}
                 onSaveOrder={handleSaveOrder}
                 isDark={isDark}
@@ -334,7 +335,7 @@ const App = () => {
             {/* FALLBACK FOR SELLER IF DASHBOARD IS SET BUT ROLE IS SELLER */}
             {currentView === 'dashboard' && sessionUser.roles.includes(UserRole.SELLER) && (
               <SellerDashboard
-                user={user}
+                user={sessionUser}
                 orders={orders}
                 onSaveOrder={handleSaveOrder}
                 isDark={isDark}
@@ -383,11 +384,14 @@ const App = () => {
             {currentView === 'reports' && sessionUser?.roles.includes(UserRole.ADMIN) && (
               <ReportsView orders={orders} isDark={isDark} />
             )}
+            {currentView === 'help' && (
+              <HelpView user={sessionUser} />
+            )}
 
             {/* GENERIC VIEWS (NEW/EDIT) */}
             {(currentView === 'new-order' || currentView === 'edit-order') && (
               <SellerDashboard
-                user={user}
+                user={sessionUser}
                 orders={orders}
                 onSaveOrder={handleSaveOrder}
                 editingOrderId={editingOrderId}

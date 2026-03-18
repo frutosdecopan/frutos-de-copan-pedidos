@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { BarChart3, BarChart2, Package, ClipboardList, Truck, Users, Calendar, Sun, Moon, LogOut, Settings, RefreshCw } from 'lucide-react';
+import { BarChart3, BarChart2, Package, ClipboardList, Truck, Users, Calendar, Sun, Moon, LogOut, Settings, RefreshCw, HelpCircle } from 'lucide-react';
 import { User, UserRole } from '../../types';
 import { Logo } from '../common';
 
@@ -23,6 +23,7 @@ export const Sidebar: FC<SidebarProps> = ({ user, onLogout, activeView, setView,
         { id: 'availability', icon: Calendar, label: 'Disponibilidad', roles: [UserRole.ADMIN] },
         { id: 'reports', icon: BarChart2, label: 'Reportes', roles: [UserRole.ADMIN] },
         { id: 'config', icon: Settings, label: 'Configuración', roles: [UserRole.ADMIN] },
+        { id: 'help', icon: HelpCircle, label: 'Ayuda', roles: Object.values(UserRole) },
     ];
 
     const visibleItems = menuItems.filter(i => i.roles.some(r => user.roles.includes(r)));

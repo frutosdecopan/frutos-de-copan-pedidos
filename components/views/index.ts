@@ -5,3 +5,4 @@ export { DeliveryDashboard } from './DeliveryDashboard';
 export { SellerDashboard } from './SellerDashboard';
 export { AdminDashboard } from './AdminDashboard';
 export { ManagementDashboard } from './ManagementDashboard';
+export { HelpView } from './HelpView';
