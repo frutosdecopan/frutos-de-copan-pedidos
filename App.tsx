@@ -344,7 +344,7 @@ const App = () => {
 
             {currentView === 'all-orders' && (
               <ManagementDashboard
-                user={user}
+                user={sessionUser}
                 orders={orders}
                 users={displayUsers}
                 onUpdateStatus={handleUpdateStatus}
