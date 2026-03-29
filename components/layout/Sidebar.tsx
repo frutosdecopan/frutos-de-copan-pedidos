@@ -104,6 +104,15 @@ export const Sidebar: FC<SidebarProps> = ({ user, onLogout, activeView, setView,
                     <span className="font-bold text-gray-900 dark:text-white text-base">Frutos de Copán</span>
                 </div>
                 <div className="flex items-center gap-2">
+                    {onSwitchRole && (
+                        <button
+                            onClick={onSwitchRole}
+                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            aria-label="Cambiar modo de rol"
+                        >
+                            <RefreshCw className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                        </button>
+                    )}
                     <button
                         onClick={toggleTheme}
                         className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"

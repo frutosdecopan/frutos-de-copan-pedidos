@@ -236,6 +236,11 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                                 </span>
                             )}
                         </button>
+                        {(user.role === UserRole.WAREHOUSE || user.role === UserRole.ADMIN) && order.status === OrderStatus.DELIVERED && (
+                            <button onClick={() => onEditOrder(order)} className={`${btnClass} ${getStyle('gray')} flex items-center justify-center`}>
+                                <Edit2 className="w-3 h-3 mr-1" /> Editar
+                            </button>
+                        )}
                         <button onClick={() => handleOpenHistory(order)} className={`${btnClass} ${getStyle('gray')} flex items-center justify-center`}>
                             <Clock className="w-3 h-3 mr-1" /> Historial
                         </button>
@@ -280,6 +285,11 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                                         </span>
                                     )}
                                 </button>
+                                {(user.role === UserRole.WAREHOUSE || user.role === UserRole.ADMIN) && (order.status === OrderStatus.DISPATCH) && (
+                                    <button onClick={() => onEditOrder(order)} className={`${btnClass} ${getStyle('gray')} flex items-center justify-center flex-1`}>
+                                        <Edit2 className="w-3 h-3" />
+                                    </button>
+                                )}
                                 <button onClick={() => handleOpenHistory(order)} className={`${btnClass} ${getStyle('gray')} flex items-center justify-center flex-1`}>
                                     <Clock className="w-3 h-3" />
                                 </button>
@@ -317,6 +327,11 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                                         </span>
                                     )}
                                 </button>
+                                {(user.role === UserRole.WAREHOUSE || user.role === UserRole.ADMIN) && (order.status === OrderStatus.DISPATCH) && (
+                                    <button onClick={() => onEditOrder(order)} className={`${btnClass} ${getStyle('gray')} flex items-center justify-center flex-1`}>
+                                        <Edit2 className="w-3 h-3" />
+                                    </button>
+                                )}
                                 <button onClick={() => handleOpenHistory(order)} className={`${btnClass} ${getStyle('gray')} flex items-center justify-center flex-1`}>
                                     <Clock className="w-3 h-3" />
                                 </button>

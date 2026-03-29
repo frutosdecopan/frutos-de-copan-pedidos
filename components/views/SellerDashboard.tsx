@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, ShoppingCart, CheckCircle2, Clock, MapPin, Package, Edit2, ChevronDown, ChevronUp, MessageSquare, X, CalendarDays } from 'lucide-react';
+import { Plus, Search, ShoppingCart, CheckCircle2, Clock, MapPin, Package, Edit2, ChevronDown, ChevronUp, MessageSquare, X, CalendarDays, Filter, XCircle } from 'lucide-react';
 import { User, Order, OrderStatus, OrderItem } from '../../types';
+import { OrderFilters } from '../../hooks/useOrders';
 import { useCities } from '../../hooks/useCities';
 import { Button, StatusBadge, TypeBadge, CardSkeleton } from '../common';
 import { OrderComments } from '../orders/OrderComments';
@@ -14,12 +15,26 @@ import { useOrderTypes } from '../../hooks/useOrderTypes';
 interface SellerDashboardProps {
     user: User;
     orders: Order[];
-    onSaveOrder: (order: Partial<Order>, isEdit?: boolean) => void;
-    editingOrderId?: string | null; // Optional prop to indicate edit mode
+    onSaveOrder: (order: Partial<Order>, isEdit?: boolean) => Promise<void>;
+    onApplyFilters?: (filters: OrderFilters) => void;
+    onLoadMore?: () => void;
+    hasMore?: boolean;
+    isLoadingOrders?: boolean;
+    editingOrderId?: string | null;
     isDark: boolean;
 }
 
-export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: propEditingOrderId, isDark }: SellerDashboardProps) => {
+export const SellerDashboard = ({
+    user,
+    orders,
+    onSaveOrder,
+    onApplyFilters,
+    onLoadMore,
+    hasMore,
+    isLoadingOrders,
+    editingOrderId: propEditingOrderId,
+    isDark
+}: SellerDashboardProps) => {
     const { addToast } = useToast();
     const { cities, loading: citiesLoading } = useCities();
     const { products, loading: productsLoading } = useProducts();
@@ -131,6 +146,31 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
     const [cart, setCart] = useState<OrderItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [headerCollapsed, setHeaderCollapsed] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
+    const [filterStatus, setFilterStatus] = useState<OrderStatus | ''>('');
+    const [filterCityId, setFilterCityId] = useState<string>('');
+    const [filterStartDate, setFilterStartDate] = useState('');
+    const [filterEndDate, setFilterEndDate] = useState('');
+    const [showAllOrders, setShowAllOrders] = useState(false); // New: toggle to see all orders vs only mine
+
+    const handleApplyFilters = async () => {
+        if (onApplyFilters) {
+            setIsRefreshing(true);
+            try {
+                onApplyFilters({
+                    status: filterStatus || undefined,
+                    cityId: filterCityId || undefined,
+                    startDate: filterStartDate || undefined,
+                    endDate: filterEndDate || undefined,
+                    userId: showAllOrders ? undefined : user.id,
+                    searchTerm: searchTerm || undefined
+                });
+            } finally {
+                setTimeout(() => setIsRefreshing(false), 500);
+            }
+        }
+    };
 
     // Initialize destination when destinations load
     useEffect(() => {
@@ -159,14 +199,64 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
         }
     }, [propEditingOrderId, orders, destinations]);
 
-    const myOrders = useMemo(() =>
-        orders.filter(o => o.userId === user.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-        [orders, user.id]);
+    const myOrders = useMemo(() => {
+        let filtered = orders;
+        if (!showAllOrders) {
+            filtered = filtered.filter(o => o.userId === user.id);
+        }
+        return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }, [orders, user.id, showAllOrders]);
 
     const HISTORY_STATUSES = [OrderStatus.DELIVERED, OrderStatus.CANCELLED, OrderStatus.REJECTED];
+
+    const displayOrders = useMemo(() => {
+        let filtered = myOrders;
+
+        // Tab Filtering
+        if (activeTab === 'active') {
+            filtered = filtered.filter(o => !HISTORY_STATUSES.includes(o.status));
+        } else {
+            filtered = filtered.filter(o => HISTORY_STATUSES.includes(o.status));
+        }
+
+        // Status Filter
+        if (filterStatus) {
+            filtered = filtered.filter(o => o.status === filterStatus);
+        }
+
+        // City Filter
+        if (filterCityId) {
+            filtered = filtered.filter(o => o.cityId === filterCityId);
+        }
+
+        // Date Range Filter
+        if (filterStartDate) {
+            const start = new Date(filterStartDate);
+            start.setHours(0, 0, 0, 0);
+            filtered = filtered.filter(o => new Date(o.createdAt) >= start);
+        }
+        if (filterEndDate) {
+            const end = new Date(filterEndDate);
+            end.setHours(23, 59, 59, 999);
+            filtered = filtered.filter(o => new Date(o.createdAt) <= end);
+        }
+
+        // Text Search
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            filtered = filtered.filter(o =>
+                o.clientName.toLowerCase().includes(term) ||
+                o.id.toString().includes(term) ||
+                o.destinationName?.toLowerCase().includes(term) ||
+                o.items.some(i => i.productName.toLowerCase().includes(term))
+            );
+        }
+
+        return filtered;
+    }, [myOrders, activeTab, filterStatus, filterCityId, filterStartDate, filterEndDate, searchTerm]);
+
     const activeOrders = useMemo(() => myOrders.filter(o => !HISTORY_STATUSES.includes(o.status)), [myOrders]);
     const historyOrders = useMemo(() => myOrders.filter(o => HISTORY_STATUSES.includes(o.status)), [myOrders]);
-    const displayOrders = activeTab === 'active' ? activeOrders : historyOrders;
 
     const originCityName = useMemo(() => {
         const city = cities.find(c => c.id === user.assignedCities[0]);
@@ -283,6 +373,12 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
         const targetWarehouse = availableWarehouses.find(w => w.warehouseId === selectedWarehouseId);
         if (!targetWarehouse) return;
 
+        let finalStatus = OrderStatus.SENT;
+        const originalOrder = localEditingOrderId ? orders.find(o => o.id === localEditingOrderId) : null;
+        if (originalOrder) {
+            finalStatus = (originalOrder.status === OrderStatus.DRAFT) ? OrderStatus.SENT : originalOrder.status;
+        }
+
         const payload: Partial<Order> = {
             id: localEditingOrderId || undefined,
             userId: user.id,
@@ -297,7 +393,7 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
             cityName: targetWarehouse.cityName,
             warehouseId: targetWarehouse.warehouseId,
             warehouseName: targetWarehouse.warehouseName,
-            status: OrderStatus.SENT,
+            status: finalStatus,
             items: cart,
             deliveryDate: deliveryDate || undefined,
         };
@@ -543,6 +639,130 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
                 </Button>
             </div>
 
+            {/* Filters Bar */}
+            <div className="mb-6 space-y-4">
+                <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Buscar por cliente, pedido o producto..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                        />
+                        {(isLoadingOrders || isRefreshing) && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-brand-600"></div>
+                            </div>
+                        )}
+                    </div>
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={`p-2 rounded-lg border flex items-center gap-2 transition-all ${showFilters
+                            ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400'
+                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            }`}
+                    >
+                        <Filter className="w-4 h-4" />
+                        <span className="text-sm font-medium hidden sm:inline">Filtros</span>
+                        {(filterStatus || filterCityId || filterStartDate || filterEndDate || showAllOrders) && (
+                            <span className="w-2 h-2 bg-brand-500 rounded-full"></span>
+                        )}
+                    </button>
+                    {(filterStatus || filterCityId || filterStartDate || filterEndDate || showAllOrders || searchTerm) && (
+                        <button
+                            onClick={() => {
+                                setFilterStatus('');
+                                setFilterCityId('');
+                                setFilterStartDate('');
+                                setFilterEndDate('');
+                                setSearchTerm('');
+                                setShowAllOrders(false);
+                            }}
+                            className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                            title="Limpiar filtros"
+                        >
+                            <XCircle className="w-5 h-5" />
+                        </button>
+                    )}
+                </div>
+
+                {showFilters && (
+                    <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm animate-in slide-in-from-top-2 duration-200">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Estado</label>
+                                <select
+                                    value={filterStatus}
+                                    onChange={(e) => setFilterStatus(e.target.value as any)}
+                                    className="w-full p-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500"
+                                >
+                                    <option value="">Todos los estados</option>
+                                    {Object.values(OrderStatus).map(status => (
+                                        <option key={status} value={status}>{status}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Ciudad/Bodega</label>
+                                <select
+                                    value={filterCityId}
+                                    onChange={(e) => setFilterCityId(e.target.value)}
+                                    className="w-full p-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500"
+                                >
+                                    <option value="">Todas las ciudades</option>
+                                    {cities.map(city => (
+                                        <option key={city.id} value={city.id}>{city.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Desde</label>
+                                <input
+                                    type="date"
+                                    value={filterStartDate}
+                                    onChange={(e) => setFilterStartDate(e.target.value)}
+                                    className="w-full p-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Hasta</label>
+                                <input
+                                    type="date"
+                                    value={filterEndDate}
+                                    onChange={(e) => setFilterEndDate(e.target.value)}
+                                    className="w-full p-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500"
+                                />
+                            </div>
+                        </div>
+                        {user.role === UserRole.ADMIN && (
+                            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center">
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={showAllOrders}
+                                        onChange={(e) => setShowAllOrders(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-brand-300 dark:peer-focus:ring-brand-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-brand-600"></div>
+                                    <span className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">Mostrar pedidos de todos los vendedores</span>
+                                </label>
+                            </div>
+                        )}
+                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
+                            <Button
+                                onClick={handleApplyFilters}
+                                disabled={isLoadingOrders || isRefreshing}
+                                className="w-full sm:w-auto"
+                            >
+                                <Search className="w-4 h-4 mr-2" /> Aplicar Filtros
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {/* Tabs */}
             <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl mb-6">
                 <button
@@ -741,6 +961,26 @@ export const SellerDashboard = ({ user, orders, onSaveOrder, editingOrderId: pro
                             </div>
                         </div>
                     ))
+                )}
+
+                {hasMore && (
+                    <div className="pt-4 pb-12 flex justify-center">
+                        <Button
+                            variant="secondary"
+                            onClick={onLoadMore}
+                            disabled={isLoadingOrders || isRefreshing}
+                            className="w-full sm:w-auto px-12"
+                        >
+                            {isLoadingOrders || isRefreshing ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-brand-600"></div>
+                                    Cargando...
+                                </div>
+                            ) : (
+                                'Ver más pedidos'
+                            )}
+                        </Button>
+                    </div>
                 )}
             </div>
 

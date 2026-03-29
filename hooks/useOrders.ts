@@ -2,10 +2,20 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Order, OrderStatus } from '../types';
 
+export interface OrderFilters {
+    status?: OrderStatus | '';
+    cityId?: string;
+    startDate?: string;
+    endDate?: string;
+    userId?: string;
+    searchTerm?: string;
+}
+
 export function useOrders() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [filters, setFilters] = useState<OrderFilters>({});
 
     const [hasMore, setHasMore] = useState(true);
     const PAGE_SIZE = 50;
@@ -54,14 +64,14 @@ export function useOrders() {
 
     // Fetch orders with pagination
     // silent=true skips the loading state (used for background polling)
-    const fetchOrders = async (page = 0, append = false, silent = false) => {
+    const fetchOrders = async (page = 0, append = false, silent = false, currentFilters: OrderFilters = filters) => {
         try {
             if (page === 0 && !silent) setLoading(true);
 
             const from = page * PAGE_SIZE;
             const to = from + PAGE_SIZE - 1;
 
-            const { data, error } = await supabase
+            let query = supabase
                 .from('orders')
                 .select(`
           *,
@@ -85,11 +95,35 @@ export function useOrders() {
             content,
             created_at
           )
-        `)
+        `);
+
+            // Apply Filters
+            if (currentFilters.userId) {
+                query = query.eq('user_id', currentFilters.userId);
+            }
+            if (currentFilters.status) {
+                query = query.eq('status', currentFilters.status);
+            }
+            if (currentFilters.cityId) {
+                // Check both origin and destination city
+                query = query.or(`city_id.eq.${currentFilters.cityId},destination_name.ilike.%${currentFilters.cityId}%`);
+            }
+            if (currentFilters.startDate) {
+                query = query.gte('created_at', currentFilters.startDate);
+            }
+            if (currentFilters.endDate) {
+                query = query.lte('created_at', currentFilters.endDate + 'T23:59:59');
+            }
+            if (currentFilters.searchTerm) {
+                const term = currentFilters.searchTerm.toLowerCase();
+                query = query.or(`client_name.ilike.%${term}%,id.ilike.%${term}%`);
+            }
+
+            const { data, error: fetchError } = await query
                 .order('created_at', { ascending: false })
                 .range(from, to);
 
-            if (error) throw error;
+            if (fetchError) throw fetchError;
 
             // Transform Supabase data
             const newOrders = (data || []).map(transformOrder);
@@ -123,6 +157,11 @@ export function useOrders() {
         if (!hasMore) return;
         const nextPage = Math.floor(orders.length / PAGE_SIZE);
         fetchOrders(nextPage, true);
+    };
+
+    const applyFilters = (newFilters: OrderFilters) => {
+        setFilters(newFilters);
+        fetchOrders(0, false, false, newFilters);
     };
 
     // Create new order
@@ -262,6 +301,7 @@ export function useOrders() {
                     warehouse_name: orderData.warehouseName,
                     city_id: orderData.cityId,
                     city_name: orderData.cityName,
+                    status: orderData.status,
                     delivery_date: orderData.deliveryDate ?? null,
                 })
                 .eq('id', orderId);
@@ -434,6 +474,7 @@ export function useOrders() {
         assignDelivery,
         addComment,
         refetch: () => fetchOrders(0),
+        applyFilters,
         loadMore,
         hasMore
     };

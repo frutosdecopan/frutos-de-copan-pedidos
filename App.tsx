@@ -133,6 +133,7 @@ const App = () => {
     updateOrderStatus,
     assignDelivery,
     addComment,
+    applyFilters,
     loadMore,
     hasMore
   } = useOrders();
@@ -323,25 +324,6 @@ const App = () => {
                 loading={ordersLoading}
               />
             )}
-            {/* SELLER DASHBOARD */}
-            {currentView === 'orders' && (
-              <SellerDashboard
-                user={sessionUser}
-                orders={orders}
-                onSaveOrder={handleSaveOrder}
-                isDark={isDark}
-              />
-            )}
-            {/* FALLBACK FOR SELLER IF DASHBOARD IS SET BUT ROLE IS SELLER */}
-            {currentView === 'dashboard' && sessionUser.roles.includes(UserRole.SELLER) && (
-              <SellerDashboard
-                user={sessionUser}
-                orders={orders}
-                onSaveOrder={handleSaveOrder}
-                isDark={isDark}
-              />
-            )}
-
             {currentView === 'all-orders' && (
               <ManagementDashboard
                 user={sessionUser}
@@ -389,11 +371,15 @@ const App = () => {
             )}
 
             {/* GENERIC VIEWS (NEW/EDIT) */}
-            {(currentView === 'new-order' || currentView === 'edit-order') && (
+            {(currentView === 'new-order' || currentView === 'edit-order' || currentView === 'orders' || (currentView === 'dashboard' && sessionUser.roles.includes(UserRole.SELLER))) && (
               <SellerDashboard
-                user={sessionUser}
+                user={sessionUser!}
                 orders={orders}
                 onSaveOrder={handleSaveOrder}
+                onApplyFilters={applyFilters}
+                onLoadMore={loadMore}
+                hasMore={hasMore}
+                isLoadingOrders={ordersLoading}
                 editingOrderId={editingOrderId}
                 isDark={isDark}
               />
