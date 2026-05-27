@@ -1,8 +1,9 @@
 import { FC, useState } from 'react';
-import { LogIn, AlertCircle, Sun, Moon } from 'lucide-react';
+import { LogIn, AlertCircle, Sun, Moon, Eye, EyeOff } from 'lucide-react';
 import { User } from '../../types';
 import { Logo } from '../common';
 import { useTheme } from '../../hooks/useTheme';
+import { Validators } from '../../utils/validators';
 
 interface LoginViewProps {
     onLogin: (user: User) => void;
@@ -12,42 +13,70 @@ interface LoginViewProps {
 export const LoginView: FC<LoginViewProps> = ({ onLogin, users }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const { isDark, toggleTheme } = useTheme();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const validateForm = (): boolean => {
+        const usernameError = Validators.required(username, 'Usuario');
+        if (usernameError) {
+            setError(usernameError);
+            return false;
+        }
+
+        const passwordError = Validators.required(password, 'Contraseña');
+        if (passwordError) {
+            setError(passwordError);
+            return false;
+        }
+
+        return true;
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        if (!username.trim() || !password.trim()) {
-            setError('Por favor ingresa usuario y contraseña');
+        if (!validateForm()) {
             return;
         }
 
-        const user = users.find(u => {
-            const userUsername = u.username?.toLowerCase() || '';
-            const userName = u.name?.toLowerCase() || '';
-            const inputUsername = username.toLowerCase();
+        setLoading(true);
 
-            return userUsername === inputUsername || userName === inputUsername;
-        });
+        try {
+            // Simular pequeño delay para mejor UX
+            await new Promise(resolve => setTimeout(resolve, 300));
 
-        if (!user) {
-            setError('Usuario o contraseña incorrectos');
-            return;
+            const user = users.find(u => {
+                const userUsername = u.username?.toLowerCase() || '';
+                const userName = u.name?.toLowerCase() || '';
+                const inputUsername = username.toLowerCase();
+
+                return userUsername === inputUsername || userName === inputUsername;
+            });
+
+            if (!user) {
+                setError('Usuario o contraseña incorrectos');
+                return;
+            }
+
+            if (!user.isActive) {
+                setError('Este usuario está inactivo. Contacta al administrador.');
+                return;
+            }
+
+            if (user.password !== password) {
+                setError('Usuario o contraseña incorrectos');
+                return;
+            }
+
+            onLogin(user);
+        } catch (err) {
+            setError('Error al iniciar sesión. Intente nuevamente.');
+        } finally {
+            setLoading(false);
         }
-
-        if (!user.isActive) {
-            setError('Este usuario está inactivo. Contacta al administrador.');
-            return;
-        }
-
-        if (user.password !== password) {
-            setError('Usuario o contraseña incorrectos');
-            return;
-        }
-
-        onLogin(user);
     };
 
     return (
@@ -56,6 +85,7 @@ export const LoginView: FC<LoginViewProps> = ({ onLogin, users }) => {
                 onClick={toggleTheme}
                 className="absolute top-4 right-4 p-2 rounded-lg bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition-all backdrop-blur-sm"
                 title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+                aria-label={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
             >
                 {isDark ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
             </button>
@@ -70,7 +100,7 @@ export const LoginView: FC<LoginViewProps> = ({ onLogin, users }) => {
                 <div className="p-8">
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 text-center">Iniciar Sesión</h2>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                         <div>
                             <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Usuario
@@ -79,10 +109,15 @@ export const LoginView: FC<LoginViewProps> = ({ onLogin, users }) => {
                                 id="username"
                                 type="text"
                                 value={username}
-                                onChange={(e) => setUsername(e.target.value)}
+                                onChange={(e) => {
+                                    setUsername(e.target.value);
+                                    setError('');
+                                }}
                                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                                 placeholder="Ingresa tu usuario"
                                 autoComplete="username"
+                                aria-required="true"
+                                disabled={loading}
                             />
                         </div>
 
@@ -90,19 +125,35 @@ export const LoginView: FC<LoginViewProps> = ({ onLogin, users }) => {
                             <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Contraseña
                             </label>
-                            <input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-                                placeholder="Ingresa tu contraseña"
-                                autoComplete="current-password"
-                            />
+                            <div className="relative">
+                                <input
+                                    id="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={password}
+                                    onChange={(e) => {
+                                        setPassword(e.target.value);
+                                        setError('');
+                                    }}
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 pr-12"
+                                    placeholder="Ingresa tu contraseña"
+                                    autoComplete="current-password"
+                                    aria-required="true"
+                                    disabled={loading}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                    disabled={loading}
+                                >
+                                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                </button>
+                            </div>
                         </div>
 
                         {error && (
-                            <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                            <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg" role="alert">
                                 <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
                                 <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
                             </div>
@@ -110,10 +161,20 @@ export const LoginView: FC<LoginViewProps> = ({ onLogin, users }) => {
 
                         <button
                             type="submit"
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg transition-colors focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                            disabled={loading}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-500 hover:bg-brand-600 disabled:bg-brand-400 text-white font-semibold rounded-lg transition-colors focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:cursor-not-allowed"
                         >
-                            <LogIn className="w-5 h-5" />
-                            Iniciar Sesión
+                            {loading ? (
+                                <>
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    Iniciando...
+                                </>
+                            ) : (
+                                <>
+                                    <LogIn className="w-5 h-5" />
+                                    Iniciar Sesión
+                                </>
+                            )}
                         </button>
                     </form>
                 </div>

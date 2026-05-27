@@ -1,4 +1,5 @@
 import { useState, Suspense, lazy, useEffect } from 'react';
+import { logger } from './utils/logger';
 import { UserRole, OrderStatus, Order, User, OrderItem } from './types';
 import { BarChart3, Package, ClipboardList, Truck, Users, Calendar, BarChart2, Settings } from 'lucide-react';
 import { useToast } from './ToastContext';
@@ -193,7 +194,7 @@ const App = () => {
         setCurrentView('dashboard');
       }
     } catch (error: any) {
-      console.error('Error saving order:', error);
+       logger.error('Error saving order:', error);
       addToast('Error al guardar pedido', 'error');
     }
   };
@@ -203,7 +204,7 @@ const App = () => {
       await updateOrderStatus(id, status, user?.name || 'Sistema', reason);
       addToast(`Estado actualizado a ${status}`, 'success');
     } catch (error: any) {
-      console.error('Error updating status:', error);
+       logger.error('Error updating status:', error);
       addToast('Error al actualizar el estado', 'error');
     }
   };
@@ -213,7 +214,7 @@ const App = () => {
       await assignDelivery(orderId, deliveryUserId, user?.name || 'Sistema');
       addToast('Repartidor asignado correctamente', 'success');
     } catch (error: any) {
-      console.error('Error assigning delivery:', error);
+       logger.error('Error assigning delivery:', error);
       addToast('Error al asignar repartidor', 'error');
     }
   };
@@ -223,7 +224,7 @@ const App = () => {
       await createUser(u);
       addToast('Usuario creado correctamente', 'success');
     } catch (error: any) {
-      console.error('Error creating user:', error);
+       logger.error('Error creating user:', error);
       addToast('Error al crear usuario', 'error');
     }
   };
@@ -233,7 +234,7 @@ const App = () => {
       await deleteUser(id);
       addToast('Usuario eliminado correctamente', 'success');
     } catch (error: any) {
-      console.error('Error deleting user:', error);
+       logger.error('Error deleting user:', error);
       addToast('Error al eliminar usuario', 'error');
     }
   };
@@ -243,7 +244,7 @@ const App = () => {
       await updateUser(u.id, u);
       addToast('Usuario actualizado correctamente', 'success');
     } catch (error: any) {
-      console.error('Error updating user:', error);
+       logger.error('Error updating user:', error);
       addToast('Error al actualizar usuario', 'error');
     }
   }
@@ -251,7 +252,7 @@ const App = () => {
   // Define handleEditOrder before using it
   const handleEditOrder = (order: Order) => {
     try {
-      console.log("Starting edit for:", order.id);
+       logger.debug("Starting edit for:", order.id);
       setEditingOrderId(order.id);
 
       // Basic population
@@ -263,7 +264,7 @@ const App = () => {
         const _matchedCity = cities.find(c => c.name === order.destinationName);
         if (_matchedCity) setSelectedDestination(_matchedCity.name);
         else setSelectedDestination(destinations[0]?.name || '');
-      } catch (e) { console.error("City lookup error", e); }
+      } catch (e) { logger.error("City lookup error", e); }
 
       // Populate Cart safely
       if (order.items && Array.isArray(order.items)) {
@@ -273,11 +274,11 @@ const App = () => {
         setCart([]);
       }
 
-      console.log("Switching view to edit-order");
+      logger.debug("Switching view to edit-order");
       setCurrentView('edit-order');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
-      console.error("Critical error in handleEditOrder:", err);
+      logger.error("Critical error in handleEditOrder:", err);
       // Fallback
       setCurrentView('edit-order');
     }

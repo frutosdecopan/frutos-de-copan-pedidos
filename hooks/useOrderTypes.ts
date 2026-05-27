@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logger } from '../utils/logger';
 import { supabase } from '../lib/supabase';
 
 export interface OrderTypeItem {
@@ -25,7 +26,7 @@ export const useOrderTypes = () => {
 
         if (fetchError) {
             setError(fetchError.message);
-            console.error('Error fetching order types:', fetchError);
+             logger.error('Error fetching order types:', fetchError);
         } else {
             setOrderTypes(data || []);
         }
@@ -52,7 +53,7 @@ export const useOrderTypes = () => {
             .single();
 
         if (createError) {
-            console.error('Error creating order type:', createError);
+             logger.error('Error creating order type:', createError);
             return { success: false, error: createError.message };
         }
 
@@ -72,7 +73,7 @@ export const useOrderTypes = () => {
             .single();
 
         if (updateError) {
-            console.error('Error updating order type:', updateError);
+             logger.error('Error updating order type:', updateError);
             return { success: false, error: updateError.message };
         }
 

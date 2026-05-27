@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User, UserRole } from '../types';
+import { logger } from '../utils/logger';
 
 export function useUsers() {
     const [users, setUsers] = useState<User[]>([]);
@@ -11,12 +12,12 @@ export function useUsers() {
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const { data, error } = await supabase
+            const { data, error: supabaseError } = await supabase
                 .from('users')
                 .select('*')
                 .order('name');
 
-            if (error) throw error;
+            if (supabaseError) throw supabaseError;
 
             // Transform Supabase data to match our User type
             const transformedUsers: User[] = (data || []).map((user: any) => {
@@ -41,8 +42,9 @@ export function useUsers() {
 
             setUsers(transformedUsers);
             setError(null);
+            logger.debug('Users fetched successfully', { count: transformedUsers.length });
         } catch (err: any) {
-            console.error('Error fetching users:', err);
+            logger.error('Error fetching users', err);
             setError(err.message);
         } finally {
             setLoading(false);
@@ -53,7 +55,7 @@ export function useUsers() {
     const createUser = async (userData: Omit<User, 'id'>) => {
         try {
             const rolesArr = (userData.roles && userData.roles.length > 0) ? userData.roles : [userData.role];
-            const { data, error } = await supabase
+            const { data, error: supabaseError } = await supabase
                 .from('users')
                 .insert({
                     name: userData.name,
@@ -69,13 +71,15 @@ export function useUsers() {
                 .select()
                 .single();
 
-            if (error) throw error;
+            if (supabaseError) throw supabaseError;
+
+            logger.info('User created successfully', { userId: data.id, name: data.name });
 
             // Refresh users
             await fetchUsers();
             return data.id;
         } catch (err: any) {
-            console.error('Error creating user:', err);
+            logger.error('Error creating user', err);
             throw err;
         }
     };
@@ -104,17 +108,19 @@ export function useUsers() {
             }
             if (userData.isActive !== undefined) updateData.is_active = userData.isActive;
 
-            const { error } = await supabase
+            const { error: supabaseError } = await supabase
                 .from('users')
                 .update(updateData)
                 .eq('id', userId);
 
-            if (error) throw error;
+            if (supabaseError) throw supabaseError;
+
+            logger.info('User updated successfully', { userId });
 
             // Refresh users
             await fetchUsers();
         } catch (err: any) {
-            console.error('Error updating user:', err);
+            logger.error('Error updating user', err);
             throw err;
         }
     };
@@ -122,17 +128,19 @@ export function useUsers() {
     // Delete user (soft delete)
     const deleteUser = async (userId: string) => {
         try {
-            const { error } = await supabase
+            const { error: supabaseError } = await supabase
                 .from('users')
                 .update({ is_active: false })
                 .eq('id', userId);
 
-            if (error) throw error;
+            if (supabaseError) throw supabaseError;
+
+            logger.info('User deleted successfully', { userId });
 
             // Refresh users
             await fetchUsers();
         } catch (err: any) {
-            console.error('Error deleting user:', err);
+            logger.error('Error deleting user', err);
             throw err;
         }
     };
@@ -148,7 +156,7 @@ export function useUsers() {
                 fetchUsers();
             })
             .subscribe((status) => {
-                console.log('[Realtime] users_channel status:', status);
+                logger.debug('[Realtime] users_channel status:', { status });
             });
 
         // Polling fallback: refresh every 30 seconds in case Realtime misses events

@@ -948,7 +948,7 @@ export const SellerDashboard = ({
                                 {(order.status === OrderStatus.DRAFT || order.status === OrderStatus.SENT) ? (
                                     <button
                                         onClick={() => {
-                                            console.log('Editing order:', order);
+                                            logger.debug('Editing order:', order);
                                             handleEditOrder(order);
                                         }}
                                         className="text-white font-medium flex items-center bg-brand-600 hover:bg-brand-700 active:bg-brand-800 px-4 py-2 rounded-lg transition-colors shadow-sm"

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { logger } from '../../utils/logger';
 import { Sparkles } from 'lucide-react';
 import { Order, OrderStatus } from '../../types';
 import { generateAiReport } from '../../services/geminiService';
@@ -105,7 +106,7 @@ export const AdminDashboard = ({ orders, isDark, loading = false }: AdminDashboa
             const result = await generateAiReport(orders);
             setReport(result ?? null);
         } catch (error) {
-            console.error(error);
+            logger.error('AdminDashboard error:', error);
             addToast("Error generating AI report", 'error');
         } finally {
             setLoadingReport(false);

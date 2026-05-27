@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { logger } from '../utils/logger';
 import { Order } from "../types";
 
 // Safe initialization that doesn't crash if API key is missing (handled gracefully in UI)
@@ -43,7 +44,7 @@ export const generateAiReport = async (orders: Order[]) => {
     });
     return response.text;
   } catch (error) {
-    console.error("Error generating AI report:", error);
+    logger.error("Error generating AI report:", error);
     throw new Error("No se pudo generar el reporte de IA.");
   }
 };
