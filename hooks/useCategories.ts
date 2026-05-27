@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logger } from '../utils/logger';
 import { supabase } from '../lib/supabase';
 
 interface ProductCategory {
@@ -24,7 +25,7 @@ export const useCategories = () => {
 
         if (fetchError) {
             setError(fetchError.message);
-            console.error('Error fetching categories:', fetchError);
+             logger.error('Error fetching categories:', fetchError);
         } else {
             setCategories(data || []);
         }
@@ -40,7 +41,7 @@ export const useCategories = () => {
             .single();
 
         if (createError) {
-            console.error('Error creating category:', createError);
+             logger.error('Error creating category:', createError);
             return { success: false, error: createError.message };
         }
 
@@ -60,7 +61,7 @@ export const useCategories = () => {
             .single();
 
         if (updateError) {
-            console.error('Error updating category:', updateError);
+             logger.error('Error updating category:', updateError);
             return { success: false, error: updateError.message };
         }
 
@@ -83,7 +84,7 @@ export const useCategories = () => {
             .limit(1);
 
         if (checkError) {
-            console.error('Error checking category usage:', checkError);
+             logger.error('Error checking category usage:', checkError);
             return { success: false, error: checkError.message };
         }
 
@@ -100,7 +101,7 @@ export const useCategories = () => {
             .eq('id', id);
 
         if (deleteError) {
-            console.error('Error deleting category:', deleteError);
+             logger.error('Error deleting category:', deleteError);
             return { success: false, error: deleteError.message };
         }
 

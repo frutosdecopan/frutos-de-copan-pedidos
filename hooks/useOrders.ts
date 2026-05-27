@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { Order, OrderStatus } from '../types';
+import { logger } from '../utils/logger';
 
 export interface OrderFilters {
     status?: OrderStatus | '';
@@ -21,7 +22,7 @@ export function useOrders() {
     const PAGE_SIZE = 50;
 
     // Helper to transform single order
-    const transformOrder = (order: any): Order => ({
+    const transformOrder = useCallback((order: any): Order => ({
         id: order.id,
         userId: order.user_id,
         userName: order.user_name,
@@ -60,7 +61,7 @@ export function useOrders() {
         })).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
         assignedDeliveryId: order.assigned_delivery_id,
         deliveryDate: order.delivery_date ?? undefined,
-    });
+    }), []);
 
     // Fetch orders with pagination
     // silent=true skips the loading state (used for background polling)
@@ -145,8 +146,9 @@ export function useOrders() {
             });
 
             setError(null);
+            logger.debug('Orders fetched successfully', { count: newOrders.length, page });
         } catch (err: any) {
-            console.error('Error fetching orders:', err);
+            logger.error('Error fetching orders', err);
             setError(err.message);
         } finally {
             setLoading(false);
@@ -244,9 +246,10 @@ export function useOrders() {
 
             // Refresh orders
             await fetchOrders();
+            logger.info('Order created successfully', { orderId });
             return orderId;
         } catch (err: any) {
-            console.error('Error creating order:', err);
+            logger.error('Error creating order', err);
             throw err;
         }
     };
@@ -279,8 +282,9 @@ export function useOrders() {
 
             // Refresh orders
             await fetchOrders();
+            logger.info('Order status updated', { orderId, newStatus });
         } catch (err: any) {
-            console.error('Error updating order status:', err);
+            logger.error('Error updating order status', err);
             throw err;
         }
     };
@@ -347,8 +351,9 @@ export function useOrders() {
 
             // Refresh orders
             await fetchOrders();
+            logger.info('Order updated successfully', { orderId });
         } catch (err: any) {
-            console.error('Error updating order:', err);
+            logger.error('Error updating order', err);
             throw err;
         }
     };
@@ -376,8 +381,9 @@ export function useOrders() {
 
             // Refresh orders
             await fetchOrders();
+            logger.info('Delivery assigned', { orderId, deliveryUserId });
         } catch (err: any) {
-            console.error('Error assigning delivery:', err);
+            logger.error('Error assigning delivery', err);
             throw err;
         }
     };
@@ -398,8 +404,9 @@ export function useOrders() {
 
             // Refresh orders
             await fetchOrders();
+            logger.debug('Comment added', { orderId });
         } catch (err: any) {
-            console.error('Error adding comment:', err);
+            logger.error('Error adding comment', err);
             throw err;
         }
     };
@@ -450,7 +457,7 @@ export function useOrders() {
                 }
             })
             .subscribe((status) => {
-                console.log('[Realtime] orders_channel status:', status);
+                logger.debug('[Realtime] orders_channel status:', { status });
             });
 
         // Polling fallback: refresh silently every 60 seconds (silent=true avoids loading flicker)

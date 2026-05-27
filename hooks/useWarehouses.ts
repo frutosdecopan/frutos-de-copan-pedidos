@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logger } from '../utils/logger';
 import { supabase } from '../lib/supabase';
 import { Warehouse } from '../types';
 
@@ -25,7 +26,7 @@ export const useWarehouses = () => {
 
         if (fetchError) {
             setError(fetchError.message);
-            console.error('Error fetching warehouses:', fetchError);
+             logger.error('Error fetching warehouses:', fetchError);
         } else {
             setWarehouses(data || []);
         }
@@ -41,7 +42,7 @@ export const useWarehouses = () => {
             .single();
 
         if (createError) {
-            console.error('Error creating warehouse:', createError);
+             logger.error('Error creating warehouse:', createError);
             return { success: false, error: createError.message };
         }
 
@@ -61,7 +62,7 @@ export const useWarehouses = () => {
             .single();
 
         if (updateError) {
-            console.error('Error updating warehouse:', updateError);
+             logger.error('Error updating warehouse:', updateError);
             return { success: false, error: updateError.message };
         }
 
@@ -81,7 +82,7 @@ export const useWarehouses = () => {
             .limit(1);
 
         if (checkError) {
-            console.error('Error checking warehouse usage:', checkError);
+             logger.error('Error checking warehouse usage:', checkError);
             return { success: false, error: checkError.message };
         }
 
@@ -98,7 +99,7 @@ export const useWarehouses = () => {
             .eq('id', id);
 
         if (deleteError) {
-            console.error('Error deleting warehouse:', deleteError);
+             logger.error('Error deleting warehouse:', deleteError);
             return { success: false, error: deleteError.message };
         }
 

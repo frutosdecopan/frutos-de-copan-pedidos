@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logger } from '../utils/logger';
 import { supabase } from '../lib/supabase';
 import { City } from '../types';
 
@@ -21,7 +22,7 @@ export const useCities = () => {
 
         if (fetchError) {
             setError(fetchError.message);
-            console.error('Error fetching cities:', fetchError);
+             logger.error('Error fetching cities:', fetchError);
         } else {
             setCities(data || []);
         }
@@ -37,7 +38,7 @@ export const useCities = () => {
             .single();
 
         if (createError) {
-            console.error('Error creating city:', createError);
+             logger.error('Error creating city:', createError);
             return { success: false, error: createError.message };
         }
 
@@ -57,7 +58,7 @@ export const useCities = () => {
             .single();
 
         if (updateError) {
-            console.error('Error updating city:', updateError);
+             logger.error('Error updating city:', updateError);
             return { success: false, error: updateError.message };
         }
 
@@ -77,7 +78,7 @@ export const useCities = () => {
             .limit(1);
 
         if (checkError) {
-            console.error('Error checking city usage:', checkError);
+             logger.error('Error checking city usage:', checkError);
             return { success: false, error: checkError.message };
         }
 
@@ -94,7 +95,7 @@ export const useCities = () => {
             .eq('id', id);
 
         if (deleteError) {
-            console.error('Error deleting city:', deleteError);
+             logger.error('Error deleting city:', deleteError);
             return { success: false, error: deleteError.message };
         }
 

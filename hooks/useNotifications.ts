@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { logger } from '../utils/logger';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../ToastContext';
 import { User, UserRole, OrderStatus } from '../types';
@@ -28,7 +29,7 @@ if (typeof window !== 'undefined') {
     const unlock = () => {
         const ctx = getOrCreateCtx();
         if (ctx && ctx.state === 'suspended') {
-            ctx.resume().then(() => console.log('🔊 AudioContext desbloqueado'));
+            ctx.resume().then(() => logger.debug('🔊 AudioContext desbloqueado'));
         }
     };
     window.addEventListener('click', unlock);
@@ -44,12 +45,12 @@ if (typeof window !== 'undefined') {
 function playNotificationSound(type: 'new_order' | 'assigned') {
     const ctx = getOrCreateCtx();
     if (!ctx) {
-        console.warn('🔇 Web Audio API no disponible en este navegador');
+        logger.warn('🔇 Web Audio API no disponible en este navegador');
         return;
     }
 
     const doPlay = () => {
-        console.log(`🔊 Sonido "${type}" | contexto: ${ctx.state}`);
+         logger.debug(`🔊 Sonido "${type}" | contexto: ${ctx.state}`);
 
         if (type === 'new_order') {
             // Doble bip ascendente: 880 Hz → 1100 Hz
@@ -85,7 +86,7 @@ function playNotificationSound(type: 'new_order' | 'assigned') {
 
     // Si el contexto está suspendido, resumirlo antes de tocar
     if (ctx.state === 'suspended') {
-        ctx.resume().then(doPlay).catch((e) => console.error('Audio resume error:', e));
+        ctx.resume().then(doPlay).catch((e) =>  logger.error('Audio resume error:', e));
     } else {
         doPlay();
     }
@@ -99,7 +100,7 @@ export function useNotifications(user: User | null) {
     useEffect(() => {
         if (!user) return;
 
-        console.log('🔔 Suscribiendo a notificaciones para:', user.role);
+        logger.debug('🔔 Suscribiendo a notificaciones para:', user.role);
 
         const subscription = supabase
             .channel('orders_notifications')

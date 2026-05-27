@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logger } from '../utils/logger';
 import { supabase } from '../lib/supabase';
 import { Presentation } from '../types';
 
@@ -18,7 +19,7 @@ export const usePresentations = () => {
 
         if (fetchError) {
             setError(fetchError.message);
-            console.error('Error fetching presentations:', fetchError);
+             logger.error('Error fetching presentations:', fetchError);
         } else {
             setPresentations(data || []);
         }
@@ -34,7 +35,7 @@ export const usePresentations = () => {
             .single();
 
         if (createError) {
-            console.error('Error creating presentation:', createError);
+             logger.error('Error creating presentation:', createError);
             return { success: false, error: createError.message };
         }
 
@@ -54,7 +55,7 @@ export const usePresentations = () => {
             .single();
 
         if (updateError) {
-            console.error('Error updating presentation:', updateError);
+             logger.error('Error updating presentation:', updateError);
             return { success: false, error: updateError.message };
         }
 
@@ -74,7 +75,7 @@ export const usePresentations = () => {
             .limit(1);
 
         if (checkError) {
-            console.error('Error checking presentation usage:', checkError);
+             logger.error('Error checking presentation usage:', checkError);
             return { success: false, error: checkError.message };
         }
 
@@ -91,7 +92,7 @@ export const usePresentations = () => {
             .eq('id', id);
 
         if (deleteError) {
-            console.error('Error deleting presentation:', deleteError);
+             logger.error('Error deleting presentation:', deleteError);
             return { success: false, error: deleteError.message };
         }
 

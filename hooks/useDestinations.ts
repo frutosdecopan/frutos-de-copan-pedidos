@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logger } from '../utils/logger';
 import { supabase } from '../lib/supabase';
 
 interface Destination {
@@ -24,7 +25,7 @@ export const useDestinations = () => {
 
         if (fetchError) {
             setError(fetchError.message);
-            console.error('Error fetching destinations:', fetchError);
+             logger.error('Error fetching destinations:', fetchError);
         } else {
             setDestinations(data || []);
         }
@@ -40,7 +41,7 @@ export const useDestinations = () => {
             .single();
 
         if (createError) {
-            console.error('Error creating destination:', createError);
+             logger.error('Error creating destination:', createError);
             return { success: false, error: createError.message };
         }
 
@@ -60,7 +61,7 @@ export const useDestinations = () => {
             .single();
 
         if (updateError) {
-            console.error('Error updating destination:', updateError);
+             logger.error('Error updating destination:', updateError);
             return { success: false, error: updateError.message };
         }
 
@@ -78,7 +79,7 @@ export const useDestinations = () => {
             .eq('id', id);
 
         if (deleteError) {
-            console.error('Error deleting destination:', deleteError);
+             logger.error('Error deleting destination:', deleteError);
             return { success: false, error: deleteError.message };
         }
 

@@ -1,4 +1,5 @@
 import { FC, useState } from 'react';
+import { logger } from '../../utils/logger';
 import { Send, MessageSquare } from 'lucide-react';
 import { OrderComment } from '../../types';
 
@@ -21,7 +22,7 @@ export const OrderComments: FC<OrderCommentsProps> = ({ comments, onAddComment, 
             await onAddComment(newComment);
             setNewComment('');
         } catch (error) {
-            console.error('Error adding comment:', error);
+             logger.error('Error adding comment:', error);
         } finally {
             setSubmitting(false);
         }

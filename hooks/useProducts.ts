@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logger } from '../utils/logger';
 import { supabase } from '../lib/supabase';
 import { Product } from '../types';
 
@@ -18,7 +19,7 @@ export const useProducts = () => {
 
         if (fetchError) {
             setError(fetchError.message);
-            console.error('Error fetching products:', fetchError);
+             logger.error('Error fetching products:', fetchError);
         } else {
             setProducts(data || []);
         }
@@ -34,7 +35,7 @@ export const useProducts = () => {
             .single();
 
         if (createError) {
-            console.error('Error creating product:', createError);
+             logger.error('Error creating product:', createError);
             return { success: false, error: createError.message };
         }
 
@@ -54,7 +55,7 @@ export const useProducts = () => {
             .single();
 
         if (updateError) {
-            console.error('Error updating product:', updateError);
+             logger.error('Error updating product:', updateError);
             return { success: false, error: updateError.message };
         }
 
@@ -74,7 +75,7 @@ export const useProducts = () => {
             .limit(1);
 
         if (checkError) {
-            console.error('Error checking product usage:', checkError);
+             logger.error('Error checking product usage:', checkError);
             return { success: false, error: checkError.message };
         }
 
@@ -91,7 +92,7 @@ export const useProducts = () => {
             .eq('id', id);
 
         if (deleteError) {
-            console.error('Error deleting product:', deleteError);
+             logger.error('Error deleting product:', deleteError);
             return { success: false, error: deleteError.message };
         }
 
