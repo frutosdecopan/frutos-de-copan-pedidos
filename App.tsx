@@ -135,7 +135,8 @@ const App = () => {
     addComment,
     applyFilters,
     loadMore,
-    hasMore
+    hasMore,
+    fetchOrdersForExport
   } = useOrders();
 
   // Wrapper for addComment to match ManagementDashboard interface
@@ -335,6 +336,7 @@ const App = () => {
                 onAddComment={handleAddComment}
                 loadMore={loadMore}
                 hasMore={hasMore}
+                fetchOrdersForExport={fetchOrdersForExport}
                 isDark={isDark}
               />
             )}

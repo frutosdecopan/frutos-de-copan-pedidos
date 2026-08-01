@@ -83,8 +83,8 @@ export const exportOrdersToPDF = (orders: Order[], filters?: FilterOptions) => {
     // Prepare table data
     const tableData = orders.map(order => {
         const productsText = order.items
-            .map(item => `${item.productName} (${item.quantity})`)
-            .join(', ');
+            .map(item => `${item.quantity} ${item.presentationName} de ${item.productName}`)
+            .join('\n');
 
         const statusText = getStatusText(order.status);
         const deliveryName = order.assignedDeliveryId ? 'Asignado' : 'Sin asignar';
@@ -93,7 +93,8 @@ export const exportOrdersToPDF = (orders: Order[], filters?: FilterOptions) => {
             order.id.substring(0, 8),
             order.clientName,
             order.destinationName,
-            productsText.length > 50 ? productsText.substring(0, 47) + '...' : productsText,
+            order.orderType,
+            productsText,
             statusText,
             deliveryName,
             new Date(order.createdAt).toLocaleDateString('es-HN')
@@ -102,7 +103,7 @@ export const exportOrdersToPDF = (orders: Order[], filters?: FilterOptions) => {
 
     // Table
     autoTable(doc, {
-        head: [['ID', 'Cliente', 'Ciudad', 'Productos', 'Estado', 'Repartidor', 'Fecha']],
+        head: [['ID', 'Cliente', 'Ciudad', 'Tipo', 'Productos', 'Estado', 'Repartidor', 'Fecha']],
         body: tableData,
         startY: 30,
         theme: 'striped',
@@ -114,19 +115,21 @@ export const exportOrdersToPDF = (orders: Order[], filters?: FilterOptions) => {
         },
         bodyStyles: {
             fontSize: 8,
-            textColor: darkGray
+            textColor: darkGray,
+            valign: 'top'
         },
         alternateRowStyles: {
             fillColor: lightGray
         },
         columnStyles: {
-            0: { cellWidth: 20 }, // ID
-            1: { cellWidth: 35 }, // Cliente
-            2: { cellWidth: 30 }, // Ciudad
-            3: { cellWidth: 70 }, // Productos
-            4: { cellWidth: 25 }, // Estado
-            5: { cellWidth: 35 }, // Repartidor
-            6: { cellWidth: 25 }  // Fecha
+            0: { cellWidth: 16 }, // ID
+            1: { cellWidth: 34 }, // Cliente
+            2: { cellWidth: 24 }, // Ciudad
+            3: { cellWidth: 18 }, // Tipo
+            4: { cellWidth: 78 }, // Productos
+            5: { cellWidth: 20 }, // Estado
+            6: { cellWidth: 26 }, // Repartidor
+            7: { cellWidth: 20 }  // Fecha
         },
         margin: { top: 30, left: 14, right: 14 },
         didDrawPage: (data) => {
@@ -175,7 +178,14 @@ export const exportOrdersToPDF = (orders: Order[], filters?: FilterOptions) => {
     }
 
     // Save PDF
-    const fileName = `pedidos_${new Date().toISOString().split('T')[0]}.pdf`;
+    const fileName = (() => {
+        const dateStart = filters?.dateStart;
+        const dateEnd = filters?.dateEnd;
+        if (dateStart && dateEnd) return `pedidos_${dateStart}_a_${dateEnd}.pdf`;
+        if (dateStart) return `pedidos_desde_${dateStart}.pdf`;
+        if (dateEnd) return `pedidos_hasta_${dateEnd}.pdf`;
+        return `pedidos_${new Date().toISOString().split('T')[0]}.pdf`;
+    })();
     doc.save(fileName);
 };
 

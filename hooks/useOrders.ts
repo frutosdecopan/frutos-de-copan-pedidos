@@ -9,6 +9,7 @@ export interface OrderFilters {
     endDate?: string;
     userId?: string;
     searchTerm?: string;
+    orderType?: string;
 }
 
 export function useOrders() {
@@ -162,6 +163,83 @@ export function useOrders() {
     const applyFilters = (newFilters: OrderFilters) => {
         setFilters(newFilters);
         fetchOrders(0, false, false, newFilters);
+    };
+
+    // Fetch the COMPLETE set of orders matching filters directly from Supabase,
+    // bypassing the small on-screen PAGE_SIZE. Used for exports (CSV/PDF) so
+    // reports aren't limited to whatever pages happen to be loaded on screen.
+    const fetchOrdersForExport = async (currentFilters: OrderFilters = {}): Promise<Order[]> => {
+        const EXPORT_BATCH_SIZE = 1000;
+        const allOrders: Order[] = [];
+        let page = 0;
+
+        while (true) {
+            const from = page * EXPORT_BATCH_SIZE;
+            const to = from + EXPORT_BATCH_SIZE - 1;
+
+            let query = supabase
+                .from('orders')
+                .select(`
+          *,
+          order_items (
+            id,
+            product_id,
+            product_name,
+            presentation_id,
+            presentation_name,
+            quantity
+          ),
+          order_logs (
+            timestamp,
+            message,
+            user_name
+          ),
+          order_comments (
+            id,
+            user_id,
+            user_name,
+            content,
+            created_at
+          )
+        `);
+
+            if (currentFilters.userId) {
+                query = query.eq('user_id', currentFilters.userId);
+            }
+            if (currentFilters.status) {
+                query = query.eq('status', currentFilters.status);
+            }
+            if (currentFilters.orderType) {
+                query = query.eq('order_type', currentFilters.orderType);
+            }
+            if (currentFilters.cityId) {
+                query = query.or(`city_id.eq.${currentFilters.cityId},destination_name.ilike.%${currentFilters.cityId}%`);
+            }
+            if (currentFilters.startDate) {
+                query = query.gte('created_at', currentFilters.startDate);
+            }
+            if (currentFilters.endDate) {
+                query = query.lte('created_at', currentFilters.endDate + 'T23:59:59');
+            }
+            if (currentFilters.searchTerm) {
+                const term = currentFilters.searchTerm.toLowerCase();
+                query = query.or(`client_name.ilike.%${term}%,id.ilike.%${term}%`);
+            }
+
+            const { data, error: fetchError } = await query
+                .order('created_at', { ascending: false })
+                .range(from, to);
+
+            if (fetchError) throw fetchError;
+
+            const batch = (data || []).map(transformOrder);
+            allOrders.push(...batch);
+
+            if (batch.length < EXPORT_BATCH_SIZE) break;
+            page++;
+        }
+
+        return allOrders;
     };
 
     // Create new order
@@ -476,6 +554,7 @@ export function useOrders() {
         refetch: () => fetchOrders(0),
         applyFilters,
         loadMore,
-        hasMore
+        hasMore,
+        fetchOrdersForExport
     };
 }

@@ -1,6 +1,19 @@
 import { Order, OrderStatus, OrderType, User } from '../types';
 
-export const exportOrdersToCSV = (orders: Order[], users: User[]) => {
+interface ExportDateFilters {
+    dateStart?: string;
+    dateEnd?: string;
+}
+
+const buildExportFileName = (baseName: string, extension: string, filters?: ExportDateFilters) => {
+    const { dateStart, dateEnd } = filters || {};
+    if (dateStart && dateEnd) return `${baseName}_${dateStart}_a_${dateEnd}.${extension}`;
+    if (dateStart) return `${baseName}_desde_${dateStart}.${extension}`;
+    if (dateEnd) return `${baseName}_hasta_${dateEnd}.${extension}`;
+    return `${baseName}_${new Date().toISOString().split('T')[0]}.${extension}`;
+};
+
+export const exportOrdersToCSV = (orders: Order[], users: User[], filters?: ExportDateFilters) => {
     // 1. Define Headers
     const headers = [
         'ID Pedido',
@@ -12,7 +25,7 @@ export const exportOrdersToCSV = (orders: Order[], users: User[]) => {
         'Bodega Origen',
         'Destino',
         'Repartidor',
-        'Productos (Resumen)',
+        'Productos',
         'Total Productos'
     ];
 
@@ -21,10 +34,10 @@ export const exportOrdersToCSV = (orders: Order[], users: User[]) => {
         const orderDate = new Date(order.createdAt).toLocaleDateString('es-HN');
         const deliveryUser = users.find(u => u.id === order.assignedDeliveryId)?.name || 'Sin asignar';
 
-        // Summarize items: "3x Cafe (400g), 2x Miel"
+        // List each product on its own line, e.g. "15 Libra de Fresa" (same format used in the app UI and PDF export)
         const itemsSummary = order.items.map(item =>
-            `${item.quantity}x ${item.productName} (${item.presentationName})`
-        ).join(', ');
+            `${item.quantity} ${item.presentationName} de ${item.productName}`
+        ).join('\n');
 
         const totalItems = order.items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -54,7 +67,7 @@ export const exportOrdersToCSV = (orders: Order[], users: User[]) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `reporte_pedidos_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', buildExportFileName('reporte_pedidos', 'csv', filters));
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();

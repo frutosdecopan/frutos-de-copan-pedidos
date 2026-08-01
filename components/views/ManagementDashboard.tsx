@@ -1,8 +1,9 @@
-import { FC, useState, useMemo } from 'react';
+import { FC, useState, useMemo, useEffect } from 'react';
 import { ClipboardList, BarChart3, Users, Edit2, Truck, Search, Filter, Calendar, X, ChevronDown, ChevronUp, Clock, Download, MessageSquare, FileText } from 'lucide-react';
 import { User, Order, OrderStatus, UserRole } from '../../types';
 import { useCities } from '../../hooks/useCities';
 import { useOrderTypes } from '../../hooks/useOrderTypes';
+import { OrderFilters } from '../../hooks/useOrders';
 import { useToast } from '../../ToastContext';
 import { TypeBadge, StatusBadge, TableSkeleton, CardSkeleton } from '../common';
 import { OrderHistory } from '../orders/OrderHistory';
@@ -20,11 +21,12 @@ interface ManagementDashboardProps {
     onAddComment: (orderId: string, content: string) => Promise<void>;
     loadMore: () => void;
     hasMore: boolean;
+    fetchOrdersForExport: (filters: OrderFilters) => Promise<Order[]>;
     isDark: boolean;
 }
 
 export const ManagementDashboard: FC<ManagementDashboardProps> = ({
-    user, orders, users, onUpdateStatus, onAssignDelivery, onEditOrder, onAddComment, loadMore, hasMore, isDark
+    user, orders, users, onUpdateStatus, onAssignDelivery, onEditOrder, onAddComment, loadMore, hasMore, fetchOrdersForExport, isDark
 }) => {
     const { addToast } = useToast();
     const { cities, loading: citiesLoading } = useCities();
@@ -42,6 +44,8 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
     const [filterSeller, setFilterSeller] = useState('all');
     const [dateStart, setDateStart] = useState('');
     const [dateEnd, setDateEnd] = useState('');
+    const [filterMonth, setFilterMonth] = useState('');
+    const [isExporting, setIsExporting] = useState<'csv' | 'pdf' | null>(null);
 
     // Reject/Cancel Modal State
     const [showRejectModal, setShowRejectModal] = useState(false);
@@ -104,7 +108,9 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
     const availableDeliveryUsers = useMemo(() => users.filter(u => u.roles.includes(UserRole.DELIVERY) && u.isActive !== false), [users]);
 
     // --- FILTERING LOGIC --- (MUST be before skeleton return to maintain hooks count)
-    const filteredOrders = useMemo(() => {
+    // Client-side filter over the paginated `orders` prop — accurate only when no
+    // filters are active (i.e. showing whatever pages have been loaded so far).
+    const localFilteredOrders = useMemo(() => {
         return orders.filter(o => {
             // 1. Text Search (ID, Client, Seller Name)
             if (searchTerm) {
@@ -153,25 +159,6 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
         }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }, [orders, searchTerm, filterCity, filterStatus, filterType, filterSeller, dateStart, dateEnd, user]);
 
-    const consolidatedData = useMemo(() => {
-        const data: Record<string, { product: string, presentation: string, total: number }> = {};
-        filteredOrders.forEach(o => {
-            if ([OrderStatus.CANCELLED, OrderStatus.DELIVERED, OrderStatus.DRAFT].includes(o.status)) return;
-            o.items.forEach(item => {
-                const key = `${item.productId}-${item.presentationId}`;
-                if (!data[key]) {
-                    data[key] = {
-                        product: item.productName,
-                        presentation: item.presentationName,
-                        total: 0
-                    };
-                }
-                data[key].total += item.quantity;
-            });
-        });
-        return Object.values(data);
-    }, [filteredOrders]);
-
     const handleDeliveryAssignChange = (orderId: string, deliveryUserId: string) => {
         if (!deliveryUserId) return;
         const selectedUser = users.find(u => u.id === deliveryUserId);
@@ -192,7 +179,107 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
         setFilterSeller('all');
         setDateStart('');
         setDateEnd('');
+        setFilterMonth('');
     };
+
+    const handleMonthChange = (value: string) => {
+        setFilterMonth(value);
+        if (!value) return;
+        const [year, month] = value.split('-').map(Number);
+        const firstDay = new Date(year, month - 1, 1);
+        const lastDay = new Date(year, month, 0);
+        const toISODate = (d: Date) => d.toISOString().split('T')[0];
+        setDateStart(toISODate(firstDay));
+        setDateEnd(toISODate(lastDay));
+    };
+
+    const buildExportFilters = (): OrderFilters => ({
+        status: filterStatus !== 'all' ? (filterStatus as OrderStatus) : undefined,
+        cityId: filterCity !== 'all' ? filterCity : undefined,
+        orderType: filterType !== 'all' ? filterType : undefined,
+        userId: filterSeller !== 'all' ? filterSeller : undefined,
+        startDate: dateStart || undefined,
+        endDate: dateEnd || undefined,
+        searchTerm: searchTerm || undefined,
+    });
+
+    const getOrdersForExport = async (): Promise<Order[]> => {
+        const allMatching = await fetchOrdersForExport(buildExportFilters());
+
+        // Replicate the same role-based city restrictions applied to the on-screen list
+        if (user.role === UserRole.WAREHOUSE) {
+            return allMatching.filter(o => user.assignedCities.includes(o.cityId));
+        }
+        if (user.role === UserRole.PRODUCTION) {
+            return allMatching.filter(o => o.status !== OrderStatus.DRAFT && user.assignedCities.includes(o.cityId));
+        }
+        return allMatching;
+    };
+
+    // Whether any filter that requires looking beyond the client-loaded pages is active
+    const hasActiveFilters = searchTerm !== '' || filterCity !== 'all' || filterStatus !== 'all'
+        || filterType !== 'all' || filterSeller !== 'all' || dateStart !== '' || dateEnd !== '';
+
+    // When filters are active, the on-screen list can't rely on the paginated `orders`
+    // prop (only whatever pages happened to load) — query Supabase directly for the
+    // full matching set, same as exports do, so filtering shows accurate results.
+    const [serverFilteredOrders, setServerFilteredOrders] = useState<Order[] | null>(null);
+    const [isFiltering, setIsFiltering] = useState(false);
+    const [filterFetchError, setFilterFetchError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!hasActiveFilters) {
+            setServerFilteredOrders(null);
+            setFilterFetchError(null);
+            return;
+        }
+
+        let cancelled = false;
+        setIsFiltering(true);
+
+        const timeoutId = setTimeout(async () => {
+            try {
+                const results = await getOrdersForExport();
+                if (cancelled) return;
+                results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                setServerFilteredOrders(results);
+                setFilterFetchError(null);
+            } catch (err: any) {
+                if (!cancelled) setFilterFetchError(err.message || 'Error al aplicar filtros');
+            } finally {
+                if (!cancelled) setIsFiltering(false);
+            }
+        }, 400);
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timeoutId);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasActiveFilters, searchTerm, filterCity, filterStatus, filterType, filterSeller, dateStart, dateEnd]);
+
+    // What's actually shown on screen: the full server-matched set while filtering,
+    // otherwise the client-side filtered view over the paginated `orders` prop.
+    const displayedOrders = hasActiveFilters ? (serverFilteredOrders ?? []) : localFilteredOrders;
+
+    const consolidatedData = useMemo(() => {
+        const data: Record<string, { product: string, presentation: string, total: number }> = {};
+        displayedOrders.forEach(o => {
+            if ([OrderStatus.CANCELLED, OrderStatus.DELIVERED, OrderStatus.DRAFT].includes(o.status)) return;
+            o.items.forEach(item => {
+                const key = `${item.productId}-${item.presentationId}`;
+                if (!data[key]) {
+                    data[key] = {
+                        product: item.productName,
+                        presentation: item.presentationName,
+                        total: 0
+                    };
+                }
+                data[key].total += item.quantity;
+            });
+        });
+        return Object.values(data);
+    }, [displayedOrders]);
 
     const activeFiltersCount = [
         filterCity !== 'all',
@@ -367,31 +454,52 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                 </div>
                 <div className="flex flex-wrap gap-2 items-center self-start md:self-auto">
                     <button
-                        onClick={() => exportOrdersToCSV(filteredOrders, users)}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+                        onClick={async () => {
+                            setIsExporting('csv');
+                            try {
+                                const exportOrders = await getOrdersForExport();
+                                exportOrdersToCSV(exportOrders, users, { dateStart, dateEnd });
+                                addToast(`CSV generado (${exportOrders.length} pedidos)`, 'success');
+                            } catch (err: any) {
+                                addToast(`Error al generar CSV: ${err.message || err}`, 'error');
+                            } finally {
+                                setIsExporting(null);
+                            }
+                        }}
+                        disabled={isExporting !== null}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
                         title="Exportar pedidos filtrados a CSV"
                     >
                         <Download className="w-4 h-4" />
-                        <span className="hidden sm:inline">Exportar CSV</span>
+                        <span className="hidden sm:inline">{isExporting === 'csv' ? 'Exportando...' : 'Exportar CSV'}</span>
                     </button>
                     <button
-                        onClick={() => {
-                            exportOrdersToPDF(filteredOrders, {
-                                searchTerm,
-                                filterCity,
-                                filterStatus,
-                                filterType,
-                                filterSeller,
-                                dateStart,
-                                dateEnd
-                            });
-                            addToast('PDF generado exitosamente', 'success');
+                        onClick={async () => {
+                            setIsExporting('pdf');
+                            try {
+                                const exportOrders = await getOrdersForExport();
+                                exportOrdersToPDF(exportOrders, {
+                                    searchTerm,
+                                    filterCity,
+                                    filterStatus,
+                                    filterType,
+                                    filterSeller,
+                                    dateStart,
+                                    dateEnd
+                                });
+                                addToast(`PDF generado exitosamente (${exportOrders.length} pedidos)`, 'success');
+                            } catch (err: any) {
+                                addToast(`Error al generar PDF: ${err.message || err}`, 'error');
+                            } finally {
+                                setIsExporting(null);
+                            }
                         }}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+                        disabled={isExporting !== null}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
                         title="Exportar pedidos filtrados a PDF"
                     >
                         <FileText className="w-4 h-4" />
-                        <span className="hidden sm:inline">Exportar PDF</span>
+                        <span className="hidden sm:inline">{isExporting === 'pdf' ? 'Exportando...' : 'Exportar PDF'}</span>
                     </button>
 
 
@@ -504,6 +612,19 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                             </select>
                         </div>
 
+                        {/* Month Quick-Select */}
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1">
+                                <Calendar className="w-3 h-3" /> Mes Específico
+                            </label>
+                            <input
+                                type="month"
+                                value={filterMonth}
+                                onChange={e => handleMonthChange(e.target.value)}
+                                className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white"
+                            />
+                        </div>
+
                         {/* Date Range - Start */}
                         <div className="space-y-1">
                             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1">
@@ -559,7 +680,20 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                                {filteredOrders.length === 0 ? (
+                                {isFiltering ? (
+                                    <tr><td colSpan={6} className="p-12 text-center text-gray-500 dark:text-gray-400">
+                                        <div className="flex flex-col items-center justify-center gap-2">
+                                            <div className="animate-spin h-6 w-6 border-2 border-brand-500 border-t-transparent rounded-full" />
+                                            <p>Buscando pedidos que coincidan con los filtros...</p>
+                                        </div>
+                                    </td></tr>
+                                ) : filterFetchError ? (
+                                    <tr><td colSpan={6} className="p-12 text-center text-red-500 dark:text-red-400">
+                                        <div className="flex flex-col items-center justify-center gap-2">
+                                            <p>Error al aplicar filtros: {filterFetchError}</p>
+                                        </div>
+                                    </td></tr>
+                                ) : displayedOrders.length === 0 ? (
                                     <tr><td colSpan={6} className="p-12 text-center text-gray-500 dark:text-gray-400">
                                         <div className="flex flex-col items-center justify-center gap-2">
                                             <Search className="w-8 h-8 opacity-20" />
@@ -568,7 +702,7 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                                         </div>
                                     </td></tr>
                                 ) : (
-                                    filteredOrders.map(order => (
+                                    displayedOrders.map(order => (
                                         <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col gap-1">
@@ -660,7 +794,7 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
             </div>
 
             {/* Pagination Controls */}
-            {activeTab === 'orders' && hasMore && !searchTerm && filterStatus === 'all' && filterCity === 'all' && filterType === 'all' && filterSeller === 'all' && (
+            {activeTab === 'orders' && hasMore && !hasActiveFilters && (
                 <div className="flex justify-center py-4">
                     <button
                         onClick={loadMore}
