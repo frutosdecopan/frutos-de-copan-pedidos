@@ -5,6 +5,7 @@ import { OrderFilters } from '../../hooks/useOrders';
 import { useCities } from '../../hooks/useCities';
 import { Button, StatusBadge, TypeBadge, CardSkeleton } from '../common';
 import { OrderCommentsReadOnlyModal } from '../orders/OrderCommentsReadOnlyModal';
+import { isValidRtn, isValidPhone } from '../../utils/orderValidation';
 import { useToast } from '../../ToastContext';
 import { UserRole } from '../../types';
 import { useProducts } from '../../hooks/useProducts';
@@ -378,11 +379,11 @@ export const SellerDashboard = ({
             addToast("Por favor ingrese el nombre del Cliente / Negocio", 'warning');
             return;
         }
-        if (clientRtn && clientRtn.length !== 13 && clientRtn.length !== 14) {
+        if (clientRtn && !isValidRtn(clientRtn)) {
             addToast("El RTN debe tener 13 o 14 dígitos", 'warning');
             return;
         }
-        if (clientPhone && clientPhone.replace(/\D/g, '').length !== 8) {
+        if (clientPhone && !isValidPhone(clientPhone)) {
             addToast("El teléfono debe tener 8 dígitos", 'warning');
             return;
         }

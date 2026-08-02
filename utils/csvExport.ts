@@ -5,7 +5,7 @@ interface ExportDateFilters {
     dateEnd?: string;
 }
 
-const buildExportFileName = (baseName: string, extension: string, filters?: ExportDateFilters) => {
+export const buildExportFileName = (baseName: string, extension: string, filters?: ExportDateFilters) => {
     const { dateStart, dateEnd } = filters || {};
     if (dateStart && dateEnd) return `${baseName}_${dateStart}_a_${dateEnd}.${extension}`;
     if (dateStart) return `${baseName}_desde_${dateStart}.${extension}`;
