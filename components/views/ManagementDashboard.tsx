@@ -55,9 +55,15 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
     const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [selectedHistoryOrder, setSelectedHistoryOrder] = useState<Order | null>(null);
 
-    // Comments Modal State
+    // Comments Modal State — stores only the id so the shown order always
+    // reflects live updates (e.g. a comment arriving via realtime) instead
+    // of a snapshot frozen at the moment the modal was opened.
     const [showCommentsModal, setShowCommentsModal] = useState(false);
-    const [selectedCommentsOrder, setSelectedCommentsOrder] = useState<Order | null>(null);
+    const [selectedCommentsOrderId, setSelectedCommentsOrderId] = useState<string | null>(null);
+    const selectedCommentsOrder = useMemo(
+        () => orders.find(o => o.id === selectedCommentsOrderId) || null,
+        [orders, selectedCommentsOrderId]
+    );
 
     const handleOpenHistory = (order: Order) => {
         setSelectedHistoryOrder(order);
@@ -65,7 +71,7 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
     };
 
     const handleOpenComments = (order: Order) => {
-        setSelectedCommentsOrder(order);
+        setSelectedCommentsOrderId(order.id);
         setShowCommentsModal(true);
     };
 

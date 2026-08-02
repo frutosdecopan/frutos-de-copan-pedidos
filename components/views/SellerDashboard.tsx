@@ -46,9 +46,15 @@ export const SellerDashboard = ({
     const [localEditingOrderId, setLocalEditingOrderId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
 
-    // Comments Modal State
+    // Comments Modal State — stores only the id so the shown order always
+    // reflects live updates (e.g. a comment arriving via realtime) instead
+    // of a snapshot frozen at the moment the modal was opened.
     const [showCommentsModal, setShowCommentsModal] = useState(false);
-    const [selectedCommentsOrder, setSelectedCommentsOrder] = useState<Order | null>(null);
+    const [selectedCommentsOrderId, setSelectedCommentsOrderId] = useState<string | null>(null);
+    const selectedCommentsOrder = useMemo(
+        () => orders.find(o => o.id === selectedCommentsOrderId) || null,
+        [orders, selectedCommentsOrderId]
+    );
 
     // Filter only available products
     const availableProducts = useMemo(() => products.filter(p => p.available), [products]);
@@ -306,7 +312,7 @@ export const SellerDashboard = ({
     };
 
     const handleOpenComments = (order: Order) => {
-        setSelectedCommentsOrder(order);
+        setSelectedCommentsOrderId(order.id);
         setShowCommentsModal(true);
     };
 

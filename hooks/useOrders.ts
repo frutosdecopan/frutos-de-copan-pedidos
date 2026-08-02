@@ -471,6 +471,31 @@ export function useOrders() {
                     setOrders(prev => prev.filter(o => o.id !== oldRecord.id));
                 }
             })
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_comments' }, (payload) => {
+                const newComment = payload.new as any;
+                setOrders(prev => prev.map(o => {
+                    if (o.id !== newComment.order_id || o.comments.some(c => c.id === newComment.id)) return o;
+                    const comment = {
+                        id: newComment.id,
+                        orderId: newComment.order_id,
+                        userId: newComment.user_id,
+                        userName: newComment.user_name,
+                        content: newComment.content,
+                        createdAt: newComment.created_at,
+                    };
+                    return {
+                        ...o,
+                        comments: [comment, ...o.comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+                    };
+                }));
+            })
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_logs' }, (payload) => {
+                const newLog = payload.new as any;
+                setOrders(prev => prev.map(o => {
+                    if (o.id !== newLog.order_id || o.logs.some(l => l.timestamp === newLog.timestamp && l.message === newLog.message)) return o;
+                    return { ...o, logs: [...o.logs, { timestamp: newLog.timestamp, message: newLog.message, user: newLog.user_name }] };
+                }));
+            })
             .subscribe((status) => {
                 console.log('[Realtime] orders_channel status:', status);
             });
