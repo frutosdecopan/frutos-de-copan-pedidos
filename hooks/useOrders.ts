@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Order, OrderStatus } from '../types';
 
@@ -12,6 +13,54 @@ export interface OrderFilters {
     orderType?: string;
 }
 
+// Shape of the raw rows Supabase returns for the `orders` query (snake_case
+// columns + joined child tables), before `transformOrder` maps them to `Order`.
+interface SupabaseOrderItemRow {
+    product_id: string;
+    product_name: string;
+    presentation_id: string;
+    presentation_name: string;
+    quantity: number;
+}
+
+interface SupabaseOrderLogRow {
+    timestamp: string;
+    message: string;
+    user_name: string;
+}
+
+interface SupabaseOrderCommentRow {
+    id: string;
+    user_id: string;
+    user_name: string;
+    content: string;
+    created_at: string;
+}
+
+interface SupabaseOrderRow {
+    id: string;
+    user_id: string;
+    user_name: string;
+    client_name: string;
+    client_rtn: string | null;
+    client_phone: string | null;
+    origin_city_name: string;
+    order_type: string;
+    destination_name: string;
+    city_id: string;
+    city_name: string;
+    warehouse_id: string;
+    warehouse_name: string;
+    created_at: string;
+    updated_at: string;
+    status: string;
+    order_items?: SupabaseOrderItemRow[];
+    order_logs?: SupabaseOrderLogRow[];
+    order_comments?: SupabaseOrderCommentRow[];
+    assigned_delivery_id?: string | null;
+    delivery_date?: string | null;
+}
+
 export function useOrders() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
@@ -22,7 +71,7 @@ export function useOrders() {
     const PAGE_SIZE = 50;
 
     // Helper to transform single order
-    const transformOrder = (order: any): Order => ({
+    const transformOrder = (order: SupabaseOrderRow): Order => ({
         id: order.id,
         userId: order.user_id,
         userName: order.user_name,
@@ -39,27 +88,27 @@ export function useOrders() {
         createdAt: order.created_at,
         updatedAt: order.updated_at,
         status: order.status as OrderStatus,
-        items: (order.order_items || []).map((item: any) => ({
+        items: (order.order_items || []).map(item => ({
             productId: item.product_id,
             productName: item.product_name,
             presentationId: item.presentation_id,
             presentationName: item.presentation_name,
             quantity: item.quantity
         })),
-        logs: (order.order_logs || []).map((log: any) => ({
+        logs: (order.order_logs || []).map(log => ({
             timestamp: log.timestamp,
             message: log.message,
             user: log.user_name
         })),
-        comments: (order.order_comments || []).map((comment: any) => ({
+        comments: (order.order_comments || []).map(comment => ({
             id: comment.id,
             orderId: order.id,
             userId: comment.user_id,
             userName: comment.user_name,
             content: comment.content,
             createdAt: comment.created_at
-        })).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-        assignedDeliveryId: order.assigned_delivery_id,
+        })).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+        assignedDeliveryId: order.assigned_delivery_id ?? undefined,
         deliveryDate: order.delivery_date ?? undefined,
     });
 
@@ -439,11 +488,9 @@ export function useOrders() {
         // Set up real-time subscription
         const subscription = supabase
             .channel('orders_channel')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async (payload) => {
-                const eventType = payload.eventType;
-                const newRecord = payload.new as any;
-
-                if (eventType === 'INSERT') {
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async (payload: RealtimePostgresChangesPayload<SupabaseOrderRow>) => {
+                if (payload.eventType === 'INSERT') {
+                    const newRecord = payload.new;
                     // Fetch complete order data for the new record
                     const { data, error } = await supabase
                         .from('orders')
@@ -464,21 +511,22 @@ export function useOrders() {
                             return [transformed, ...prev];
                         });
                     }
-                } else if (eventType === 'UPDATE') {
-                    const newRecord = payload.new as any;
+                } else if (payload.eventType === 'UPDATE') {
+                    const newRecord = payload.new;
                     setOrders(prev => prev.map(o => {
                         if (o.id === newRecord.id) {
-                            return { ...o, status: newRecord.status, assignedDeliveryId: newRecord.assigned_delivery_id, updatedAt: newRecord.updated_at };
+                            return { ...o, status: newRecord.status as OrderStatus, assignedDeliveryId: newRecord.assigned_delivery_id ?? undefined, updatedAt: newRecord.updated_at };
                         }
                         return o;
                     }));
-                } else if (eventType === 'DELETE') {
-                    const oldRecord = payload.old as any;
+                } else if (payload.eventType === 'DELETE') {
+                    const oldRecord = payload.old;
                     setOrders(prev => prev.filter(o => o.id !== oldRecord.id));
                 }
             })
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_comments' }, (payload) => {
-                const newComment = payload.new as any;
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_comments' }, (payload: RealtimePostgresChangesPayload<SupabaseOrderCommentRow & { order_id: string }>) => {
+                if (payload.eventType !== 'INSERT') return;
+                const newComment = payload.new;
                 setOrders(prev => prev.map(o => {
                     if (o.id !== newComment.order_id || o.comments.some(c => c.id === newComment.id)) return o;
                     const comment = {
@@ -495,8 +543,9 @@ export function useOrders() {
                     };
                 }));
             })
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_logs' }, (payload) => {
-                const newLog = payload.new as any;
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_logs' }, (payload: RealtimePostgresChangesPayload<SupabaseOrderLogRow & { order_id: string }>) => {
+                if (payload.eventType !== 'INSERT') return;
+                const newLog = payload.new;
                 setOrders(prev => prev.map(o => {
                     if (o.id !== newLog.order_id || o.logs.some(l => l.timestamp === newLog.timestamp && l.message === newLog.message)) return o;
                     return { ...o, logs: [...o.logs, { timestamp: newLog.timestamp, message: newLog.message, user: newLog.user_name }] };

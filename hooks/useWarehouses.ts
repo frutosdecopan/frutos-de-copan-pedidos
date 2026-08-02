@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Warehouse } from '../types';
 
-interface WarehouseWithCity extends Warehouse {
+export interface WarehouseWithCity extends Warehouse {
     city_id: string;
 }
 

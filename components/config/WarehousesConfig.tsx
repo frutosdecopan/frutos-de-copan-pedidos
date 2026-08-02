@@ -1,6 +1,6 @@
 import { FC, useState } from 'react';
 import { Building2, Plus, Edit2, Trash2 } from 'lucide-react';
-import { useWarehouses } from '../../hooks/useWarehouses';
+import { useWarehouses, WarehouseWithCity } from '../../hooks/useWarehouses';
 import { useCities } from '../../hooks/useCities';
 import { Modal, ConfirmDialog } from '../common';
 import { useToast } from '../../ToastContext';
@@ -11,11 +11,11 @@ export const WarehousesConfig: FC = () => {
     const { addToast } = useToast();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingWarehouse, setEditingWarehouse] = useState<any | null>(null);
+    const [editingWarehouse, setEditingWarehouse] = useState<WarehouseWithCity | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
     const [formData, setFormData] = useState({ name: '', city_id: '', type: 'Local' as 'Local' | 'Principal' });
 
-    const handleOpenModal = (warehouse?: any) => {
+    const handleOpenModal = (warehouse?: WarehouseWithCity) => {
         if (warehouse) {
             setEditingWarehouse(warehouse);
             setFormData({ name: warehouse.name, city_id: warehouse.city_id, type: warehouse.type });

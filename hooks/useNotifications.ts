@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { useEffect, useRef } from 'react';
 import { useToast } from '../ToastContext';
-import { User, UserRole, OrderStatus } from '../types';
+import { User, UserRole, OrderStatus, Order } from '../types';
 
 // ─── Web Audio API ────────────────────────────────────────────────────────────
 // Se usa un único AudioContext compartido para evitar límites del navegador.
@@ -93,68 +92,68 @@ function playNotificationSound(type: 'new_order' | 'assigned') {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useNotifications(user: User | null) {
+// Deriva notificaciones comparando el arreglo `orders` (ya mantenido al día por
+// useOrders, con su propia suscripción Realtime) contra su valor anterior, en
+// vez de abrir una segunda suscripción `postgres_changes` redundante sobre la
+// misma tabla `orders`.
+export function useNotifications(user: User | null, orders: Order[]) {
     const { addToast } = useToast();
+    const previousOrdersRef = useRef<Order[]>([]);
+    // true hasta que capturamos la primera "foto" de orders con un usuario
+    // activo — evita notificar como "nuevo pedido" todo lo que ya existía
+    // antes de que este usuario iniciara sesión.
+    const isFirstRunRef = useRef(true);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user) {
+            isFirstRunRef.current = true;
+            return;
+        }
 
-        console.log('🔔 Suscribiendo a notificaciones para:', user.role);
+        if (isFirstRunRef.current) {
+            isFirstRunRef.current = false;
+            previousOrdersRef.current = orders;
+            return;
+        }
 
-        const subscription = supabase
-            .channel('orders_notifications')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'orders',
-                },
-                (payload) => {
-                    const newOrder = payload.new as any;
-                    const oldOrder = payload.old as any;
-                    const eventType = payload.eventType;
+        const previousById = new Map(previousOrdersRef.current.map(o => [o.id, o]));
 
-                    // 1. BODEGA / ADMIN — Nuevo pedido recibido (INSERT)
-                    if (eventType === 'INSERT') {
-                        const isRelevant =
-                            user.roles.includes(UserRole.ADMIN) ||
-                            (user.roles.includes(UserRole.WAREHOUSE) && user.assignedCities.includes(newOrder.city_id)) ||
-                            (user.roles.includes(UserRole.PRODUCTION) && user.assignedCities.includes(newOrder.city_id));
+        for (const order of orders) {
+            const previous = previousById.get(order.id);
 
-                        if (isRelevant) {
-                            addToast(`📦 Nuevo pedido recibido: ${newOrder.client_name}`, 'info');
-                            playNotificationSound('new_order');
-                        }
-                    }
+            // 1. BODEGA / ADMIN / PRODUCCIÓN — Nuevo pedido recibido
+            if (!previous) {
+                const isRelevant =
+                    user.roles.includes(UserRole.ADMIN) ||
+                    (user.roles.includes(UserRole.WAREHOUSE) && user.assignedCities.includes(order.cityId)) ||
+                    (user.roles.includes(UserRole.PRODUCTION) && user.assignedCities.includes(order.cityId));
 
-                    // 2. VENDEDOR — Cambio de estado en sus pedidos
-                    if (eventType === 'UPDATE' && user.roles.includes(UserRole.SELLER)) {
-                        if (user.id === newOrder.user_id && newOrder.status !== oldOrder.status) {
-                            let msg = `Tu pedido para ${newOrder.client_name} ahora está: ${newOrder.status}`;
-                            let type: 'success' | 'error' | 'info' = 'info';
-                            if (newOrder.status === OrderStatus.DELIVERED) type = 'success';
-                            if (newOrder.status === OrderStatus.REJECTED) type = 'error';
-                            addToast(msg, type);
-                        }
-                    }
-
-                    // 3. REPARTIDOR — Pedido asignado
-                    if (eventType === 'UPDATE' && user.roles.includes(UserRole.DELIVERY)) {
-                        if (
-                            newOrder.assigned_delivery_id === user.id &&
-                            oldOrder.assigned_delivery_id !== user.id
-                        ) {
-                            addToast(`🚚 Nuevo pedido asignado: ${newOrder.client_name}`, 'success');
-                            playNotificationSound('assigned');
-                        }
-                    }
+                if (isRelevant) {
+                    addToast(`📦 Nuevo pedido recibido: ${order.clientName}`, 'info');
+                    playNotificationSound('new_order');
                 }
-            )
-            .subscribe();
+                continue;
+            }
 
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [user, addToast]);
+            // 2. VENDEDOR — Cambio de estado en sus pedidos
+            if (user.roles.includes(UserRole.SELLER) && user.id === order.userId && order.status !== previous.status) {
+                let type: 'success' | 'error' | 'info' = 'info';
+                if (order.status === OrderStatus.DELIVERED) type = 'success';
+                if (order.status === OrderStatus.REJECTED) type = 'error';
+                addToast(`Tu pedido para ${order.clientName} ahora está: ${order.status}`, type);
+            }
+
+            // 3. REPARTIDOR — Pedido asignado
+            if (
+                user.roles.includes(UserRole.DELIVERY) &&
+                order.assignedDeliveryId === user.id &&
+                previous.assignedDeliveryId !== user.id
+            ) {
+                addToast(`🚚 Nuevo pedido asignado: ${order.clientName}`, 'success');
+                playNotificationSound('assigned');
+            }
+        }
+
+        previousOrdersRef.current = orders;
+    }, [orders, user, addToast]);
 }

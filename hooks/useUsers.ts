@@ -4,7 +4,22 @@ import { User, UserRole } from '../types';
 
 const PROFILE_COLUMNS = 'id, name, username, email, role, roles, assigned_cities, unavailable_dates, is_active, auth_user_id';
 
-const transformUser = (user: any): User => {
+// Shape of the raw row Supabase returns for `PROFILE_COLUMNS`, before
+// `transformUser` maps it to `User`.
+interface SupabaseUserRow {
+    id: string;
+    name: string;
+    username: string | null;
+    email: string;
+    role: string;
+    roles: string[] | null;
+    assigned_cities: string[] | null;
+    unavailable_dates: (string | Date)[] | null;
+    is_active: boolean | null;
+    auth_user_id: string | null;
+}
+
+const transformUser = (user: SupabaseUserRow): User => {
     const rolesArr: UserRole[] = (Array.isArray(user.roles) && user.roles.length > 0)
         ? user.roles as UserRole[]
         : [user.role as UserRole];
@@ -15,7 +30,7 @@ const transformUser = (user: any): User => {
         role: rolesArr[0],
         roles: rolesArr,
         assignedCities: user.assigned_cities || [],
-        unavailableDates: user.unavailable_dates?.map((d: any) =>
+        unavailableDates: user.unavailable_dates?.map(d =>
             typeof d === 'string' ? d : new Date(d).toISOString().split('T')[0]
         ) || [],
         isActive: user.is_active !== false,

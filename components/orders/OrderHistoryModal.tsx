@@ -1,0 +1,44 @@
+import { FC } from 'react';
+import { Clock, X } from 'lucide-react';
+import { Order } from '../../types';
+import { OrderHistory } from './OrderHistory';
+
+interface OrderHistoryModalProps {
+    order: Order;
+    onClose: () => void;
+}
+
+export const OrderHistoryModal: FC<OrderHistoryModalProps> = ({ order, onClose }) => {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                    <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-brand-600" />
+                        Historial del Pedido #{order.id}
+                    </h3>
+                    <button
+                        onClick={onClose}
+                        aria-label="Cerrar"
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto flex-1">
+                    <OrderHistory logs={order.logs || []} />
+                </div>
+
+                <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-end">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 rounded-lg transition-all"
+                    >
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
