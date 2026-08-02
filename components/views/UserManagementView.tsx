@@ -138,7 +138,7 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
             ...editingUser,
             name: editName,
             username: editUsername,
-            password: editPassword || editingUser.password, // Keep old password if not changed
+            password: editPassword || undefined, // Only sent when actually changing the password
             role: editRoles[0],
             roles: editRoles,
             assignedCities: [editCityId],
@@ -349,7 +349,7 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
                                     <tr key={u.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${!u.isActive ? 'opacity-50' : ''}`}>
                                         <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{u.name}</td>
                                         <td className="px-6 py-4 text-gray-700 dark:text-gray-300">{u.username}</td>
-                                        <td className="px-6 py-4 text-gray-700 dark:text-gray-300 font-mono text-sm">{u.password}</td>
+                                        <td className="px-6 py-4 text-gray-400 dark:text-gray-500 font-mono text-sm">•••••••• <span className="text-xs">(editar para cambiar)</span></td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-wrap gap-1">
                                                 {(u.roles && u.roles.length > 0 ? u.roles : [u.role]).map(r => (

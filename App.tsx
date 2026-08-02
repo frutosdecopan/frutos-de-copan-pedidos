@@ -120,6 +120,9 @@ const App = () => {
   const {
     users,
     loading: usersLoading,
+    login,
+    logout,
+    restoreSession,
     createUser,
     updateUser,
     deleteUser
@@ -151,7 +154,7 @@ const App = () => {
   // Use users from Supabase
   const displayUsers = users;
 
-  const handleLogin = (u: User) => {
+  const enterAppAsUser = (u: User) => {
     setUser(u);
     if (u.roles.length > 1) {
       // Multi-role: mostrar pantalla de selección
@@ -164,11 +167,28 @@ const App = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogin = async (identifier: string, password: string) => {
+    const loggedInUser = await login(identifier, password);
+    enterAppAsUser(loggedInUser);
+  };
+
+  const handleLogout = async () => {
+    await logout();
     setUser(null);
     setActiveRole(null);
     setCurrentView('login');
   };
+
+  // Restore an existing Supabase Auth session on page load/refresh.
+  const [sessionChecked, setSessionChecked] = useState(false);
+  useEffect(() => {
+    restoreSession()
+      .then(restoredUser => {
+        if (restoredUser) enterAppAsUser(restoredUser);
+      })
+      .finally(() => setSessionChecked(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSelectRole = (role: UserRole) => {
     setActiveRole(role);
@@ -284,10 +304,14 @@ const App = () => {
     }
   };
 
+  if (!sessionChecked) {
+    return <LoadingFallback />;
+  }
+
   if (!user) {
     return (
       <Suspense fallback={<LoadingFallback />}>
-        <LoginView onLogin={handleLogin} users={displayUsers} />
+        <LoginView onLogin={handleLogin} />
       </Suspense>
     );
   }

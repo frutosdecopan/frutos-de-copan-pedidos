@@ -96,7 +96,8 @@ export interface User {
   id: string;
   name: string;
   username: string;
-  password: string;
+  /** Only ever populated transiently in create/edit forms — never fetched from the server. */
+  password?: string;
   role: UserRole;            // Rol primario (primer elemento de roles, para retrocompatibilidad)
   roles: UserRole[];         // Lista completa de roles asignados
   assignedCities: string[]; // IDs of cities

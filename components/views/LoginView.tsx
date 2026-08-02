@@ -1,21 +1,20 @@
 import { FC, useState } from 'react';
 import { LogIn, AlertCircle, Sun, Moon } from 'lucide-react';
-import { User } from '../../types';
 import { Logo } from '../common';
 import { useTheme } from '../../hooks/useTheme';
 
 interface LoginViewProps {
-    onLogin: (user: User) => void;
-    users: User[];
+    onLogin: (identifier: string, password: string) => Promise<void>;
 }
 
-export const LoginView: FC<LoginViewProps> = ({ onLogin, users }) => {
+export const LoginView: FC<LoginViewProps> = ({ onLogin }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const { isDark, toggleTheme } = useTheme();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
@@ -24,30 +23,14 @@ export const LoginView: FC<LoginViewProps> = ({ onLogin, users }) => {
             return;
         }
 
-        const user = users.find(u => {
-            const userUsername = u.username?.toLowerCase() || '';
-            const userName = u.name?.toLowerCase() || '';
-            const inputUsername = username.toLowerCase();
-
-            return userUsername === inputUsername || userName === inputUsername;
-        });
-
-        if (!user) {
-            setError('Usuario o contraseña incorrectos');
-            return;
+        setIsSubmitting(true);
+        try {
+            await onLogin(username.trim(), password);
+        } catch (err: any) {
+            setError(err.message || 'Usuario o contraseña incorrectos');
+        } finally {
+            setIsSubmitting(false);
         }
-
-        if (!user.isActive) {
-            setError('Este usuario está inactivo. Contacta al administrador.');
-            return;
-        }
-
-        if (user.password !== password) {
-            setError('Usuario o contraseña incorrectos');
-            return;
-        }
-
-        onLogin(user);
     };
 
     return (
@@ -110,10 +93,11 @@ export const LoginView: FC<LoginViewProps> = ({ onLogin, users }) => {
 
                         <button
                             type="submit"
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg transition-colors focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                            disabled={isSubmitting}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-500 hover:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
                         >
                             <LogIn className="w-5 h-5" />
-                            Iniciar Sesión
+                            {isSubmitting ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                         </button>
                     </form>
                 </div>
