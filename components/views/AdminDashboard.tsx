@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
 import { Order, OrderStatus } from '../../types';
+import { OrderFilters } from '../../hooks/useOrders';
 import { generateAiReport } from '../../services/geminiService';
 import { useToast } from '../../ToastContext';
 import { Button } from '../common';
@@ -12,16 +13,30 @@ import { TopProductsChart } from '../analytics/TopProductsChart';
 import { KPISkeleton, ChartSkeleton } from '../common';
 
 interface AdminDashboardProps {
-    orders: Order[];
     isDark: boolean;
-    loading?: boolean;
+    fetchOrdersForExport: (filters: OrderFilters) => Promise<Order[]>;
 }
 
-export const AdminDashboard = ({ orders, isDark, loading = false }: AdminDashboardProps) => {
+export const AdminDashboard = ({ isDark, fetchOrdersForExport }: AdminDashboardProps) => {
     const { addToast } = useToast();
     const [report, setReport] = useState<string | null>(null);
     const [loadingReport, setLoadingReport] = useState(false);
     const theme = isDark ? 'dark' : 'light';
+
+    // Dashboard needs the full historical dataset (not the paginated `orders`
+    // used elsewhere), so KPIs/charts reflect true totals, not just loaded pages.
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        fetchOrdersForExport({})
+            .then(data => { if (!cancelled) setOrders(data); })
+            .finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // ── ALL HOOKS MUST BE BEFORE ANY EARLY RETURN ──────────────────────────
     // Colors for charts

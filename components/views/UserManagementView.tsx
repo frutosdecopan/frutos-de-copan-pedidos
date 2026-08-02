@@ -52,6 +52,9 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
         );
     };
 
+    // Delete confirmation
+    const [userToDelete, setUserToDelete] = useState<User | null>(null);
+
     const handleAdd = () => {
         if (!newName.trim() || !newUsername.trim() || !newPassword.trim()) {
             addToast('Por favor completa todos los campos requeridos', 'error');
@@ -380,7 +383,7 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
                                                     <Edit2 className="w-4 h-4" />
                                                 </button>
                                                 <button
-                                                    onClick={() => onDeleteUser(u.id)}
+                                                    onClick={() => setUserToDelete(u)}
                                                     className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition-colors"
                                                     title="Eliminar usuario"
                                                 >
@@ -501,7 +504,7 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
                                                 <Edit2 className="w-5 h-5" />
                                             </button>
                                             <button
-                                                onClick={() => onDeleteUser(u.id)}
+                                                onClick={() => setUserToDelete(u)}
                                                 className="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
                                                 title="Eliminar"
                                             >
@@ -531,6 +534,15 @@ export const UserManagementView = ({ users, onAddUser, onUpdateUser, onDeleteUse
                     ))}
                 </div>
             </div>
+
+            <ConfirmDialog
+                isOpen={userToDelete !== null}
+                onClose={() => setUserToDelete(null)}
+                onConfirm={() => userToDelete && onDeleteUser(userToDelete.id)}
+                title="Eliminar Usuario"
+                message={`¿Seguro que quieres desactivar a "${userToDelete?.name}"? Podrás reactivarlo después desde esta misma pantalla.`}
+                variant="danger"
+            />
         </div>
     );
 };

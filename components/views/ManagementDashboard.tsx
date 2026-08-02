@@ -84,22 +84,10 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
         setRejectReason('');
     };
 
+    // Business rules for valid transitions (driver required for Despacho, no
+    // reverting a route in progress) are enforced centrally in useOrders.ts'
+    // updateOrderStatus — onUpdateStatus surfaces the specific error via toast.
     const handleStatusChange = (order: Order, newStatus: OrderStatus) => {
-        // Rule 1: Cannot move TO Dispatch without a driver assigned
-        if (newStatus === OrderStatus.DISPATCH && !order.assignedDeliveryId) {
-            addToast('⚠️ DEBE ASIGNAR UN REPARTIDOR:\nPara pasar a "Despacho", primero seleccione un repartidor en la lista.', 'error', 6000);
-            return;
-        }
-
-        // Rule 2: Cannot move FROM Dispatch (if driver assigned) to previous states
-        // We allow moving to DELIVERED (forward) or CANCELLED (termination), but prevent regressions like "Back to Production"
-        if (order.status === OrderStatus.DISPATCH && order.assignedDeliveryId) {
-            if (newStatus !== OrderStatus.DELIVERED && newStatus !== OrderStatus.CANCELLED) {
-                addToast('🔒 PEDIDO EN RUTA:\nEl pedido ya está en manos del repartidor. No se puede revertir el estado.', 'error', 5000);
-                return;
-            }
-        }
-
         onUpdateStatus(order.id, newStatus);
     };
 
@@ -159,16 +147,18 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
         }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }, [orders, searchTerm, filterCity, filterStatus, filterType, filterSeller, dateStart, dateEnd, user]);
 
-    const handleDeliveryAssignChange = (orderId: string, deliveryUserId: string) => {
+    const handleDeliveryAssignChange = (order: Order, deliveryUserId: string) => {
         if (!deliveryUserId) return;
         const selectedUser = users.find(u => u.id === deliveryUserId);
-        const today = new Date().toISOString().split('T')[0];
+        // Check availability against the order's actual scheduled delivery date,
+        // not always "today" — an order can be scheduled for a future date.
+        const checkDate = order.deliveryDate || new Date().toISOString().split('T')[0];
 
-        if (selectedUser?.unavailableDates?.includes(today)) {
-            addToast(`⚠️ NO SE PUEDE ASIGNAR:\n\n${selectedUser.name} está marcado como "No Disponible" hoy (${today}).\nPor favor seleccione otro repartidor.`, 'error', 5000);
+        if (selectedUser?.unavailableDates?.includes(checkDate)) {
+            addToast(`⚠️ NO SE PUEDE ASIGNAR:\n\n${selectedUser.name} está marcado como "No Disponible" el ${checkDate}.\nPor favor seleccione otro repartidor.`, 'error', 5000);
             return;
         }
-        onAssignDelivery(orderId, deliveryUserId);
+        onAssignDelivery(order.id, deliveryUserId);
     };
 
     const clearFilters = () => {
@@ -747,7 +737,7 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                                             <td className="px-6 py-4">
                                                 <select
                                                     value={order.assignedDeliveryId || ''}
-                                                    onChange={(e) => handleDeliveryAssignChange(order.id, e.target.value)}
+                                                    onChange={(e) => handleDeliveryAssignChange(order, e.target.value)}
                                                     className="text-sm p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand-500 focus:outline-none w-full max-w-[180px] disabled:opacity-50 disabled:cursor-not-allowed"
                                                     disabled={
                                                         (user.role !== UserRole.ADMIN && user.role !== UserRole.WAREHOUSE && user.role !== UserRole.PRODUCTION) ||

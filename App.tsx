@@ -225,7 +225,7 @@ const App = () => {
       addToast(`Estado actualizado a ${status}`, 'success');
     } catch (error: any) {
       console.error('Error updating status:', error);
-      addToast('Error al actualizar el estado', 'error');
+      addToast(error.message || 'Error al actualizar el estado', 'error');
     }
   };
 
@@ -344,9 +344,8 @@ const App = () => {
           <Suspense fallback={<LoadingFallback />}>
             {currentView === 'dashboard' && !sessionUser.roles.includes(UserRole.SELLER) && !sessionUser.roles.includes(UserRole.DELIVERY) && (
               <AdminDashboard
-                orders={orders}
                 isDark={isDark}
-                loading={ordersLoading}
+                fetchOrdersForExport={fetchOrdersForExport}
               />
             )}
             {currentView === 'all-orders' && (
@@ -390,7 +389,7 @@ const App = () => {
               <ConfigurationView user={user} />
             )}
             {currentView === 'reports' && sessionUser?.roles.includes(UserRole.ADMIN) && (
-              <ReportsView orders={orders} isDark={isDark} />
+              <ReportsView fetchOrdersForExport={fetchOrdersForExport} isDark={isDark} />
             )}
             {currentView === 'help' && (
               <HelpView user={sessionUser} />

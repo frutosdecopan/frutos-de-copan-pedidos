@@ -1,10 +1,12 @@
-import { FC, useState, useMemo } from 'react';
+import { FC, useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Order, OrderStatus, OrderType } from '../../types';
+import { OrderFilters } from '../../hooks/useOrders';
 import { TrendingUp, MapPin, Calendar, Download } from 'lucide-react';
+import { ChartSkeleton } from '../common';
 
 interface ReportsViewProps {
-    orders: Order[];
+    fetchOrdersForExport: (filters: OrderFilters) => Promise<Order[]>;
     isDark: boolean;
 }
 
@@ -24,7 +26,22 @@ function isActive(order: Order): boolean {
     return order.status !== OrderStatus.CANCELLED && order.status !== OrderStatus.DRAFT;
 }
 
-export const ReportsView: FC<ReportsViewProps> = ({ orders, isDark }) => {
+export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark }) => {
+    // Reports need the full historical dataset, not the paginated `orders`
+    // used elsewhere — otherwise older data silently drops out of the charts.
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [loadingOrders, setLoadingOrders] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoadingOrders(true);
+        fetchOrdersForExport({})
+            .then(data => { if (!cancelled) setOrders(data); })
+            .finally(() => { if (!cancelled) setLoadingOrders(false); });
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const [activeTab, setActiveTab] = useState<ReportTab>('cities');
     const [periodType, setPeriodType] = useState<PeriodType>('monthly');
     const [metric, setMetric] = useState<MetricType>('orders');
@@ -286,6 +303,18 @@ export const ReportsView: FC<ReportsViewProps> = ({ orders, isDark }) => {
         link.click();
         URL.revokeObjectURL(link.href);
     };
+
+    if (loadingOrders) {
+        return (
+            <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+                <ChartSkeleton />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <ChartSkeleton />
+                    <ChartSkeleton />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
