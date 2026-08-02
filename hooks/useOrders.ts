@@ -242,87 +242,40 @@ export function useOrders() {
         return allOrders;
     };
 
-    // Create new order
+    // Create new order — order + items + log are inserted atomically via a
+    // single Postgres function (create_order_with_items), so a mid-way
+    // failure can never leave an orphaned order with no items.
     const createOrder = async (orderData: Partial<Order>) => {
         try {
-            // Generate order ID by querying the database for the highest existing ID
-            const { data: existingOrders, error: countError } = await supabase
-                .from('orders')
-                .select('id')
-                .order('id', { ascending: false })
-                .limit(1);
-
-            if (countError) throw countError;
-
-            // Extract number from last order ID (e.g., "ORD-005" -> 5)
-            let nextNumber = 1;
-            if (existingOrders && existingOrders.length > 0) {
-                const lastId = existingOrders[0].id;
-                const match = lastId.match(/ORD-(\d+)/);
-                if (match) {
-                    nextNumber = parseInt(match[1], 10) + 1;
-                }
-            }
-
-            const orderId = `ORD-${String(nextNumber).padStart(3, '0')}`;
-
-            // Insert order
-            const { data: newOrder, error: orderError } = await supabase
-                .from('orders')
-                .insert({
-                    id: orderId,
-                    user_id: orderData.userId,
-                    user_name: orderData.userName,
-                    client_name: orderData.clientName,
-                    client_rtn: orderData.clientRtn || null,
-                    client_phone: orderData.clientPhone || null,
-                    origin_city_name: orderData.originCityName,
-                    order_type: orderData.orderType,
-                    destination_name: orderData.destinationName,
-                    city_id: orderData.cityId,
-                    city_name: orderData.cityName,
-                    warehouse_id: orderData.warehouseId,
-                    warehouse_name: orderData.warehouseName,
-                    status: orderData.status || OrderStatus.SENT,
-                    delivery_date: orderData.deliveryDate || null,
-                })
-                .select()
-                .single();
-
-            if (orderError) throw orderError;
-
-            // Insert order items
-            if (orderData.items && orderData.items.length > 0) {
-                const itemsToInsert = orderData.items.map(item => ({
-                    order_id: orderId,
-                    product_id: item.productId,
-                    product_name: item.productName,
-                    presentation_id: item.presentationId,
-                    presentation_name: item.presentationName,
+            const { data: orderId, error } = await supabase.rpc('create_order_with_items', {
+                p_user_id: orderData.userId,
+                p_user_name: orderData.userName,
+                p_client_name: orderData.clientName,
+                p_client_rtn: orderData.clientRtn || null,
+                p_client_phone: orderData.clientPhone || null,
+                p_origin_city_name: orderData.originCityName,
+                p_order_type: orderData.orderType,
+                p_destination_name: orderData.destinationName,
+                p_city_id: orderData.cityId,
+                p_city_name: orderData.cityName,
+                p_warehouse_id: orderData.warehouseId,
+                p_warehouse_name: orderData.warehouseName,
+                p_status: orderData.status || OrderStatus.SENT,
+                p_delivery_date: orderData.deliveryDate || null,
+                p_items: (orderData.items || []).map(item => ({
+                    productId: item.productId,
+                    productName: item.productName,
+                    presentationId: item.presentationId,
+                    presentationName: item.presentationName,
                     quantity: item.quantity,
-                }));
+                })),
+            });
 
-                const { error: itemsError } = await supabase
-                    .from('order_items')
-                    .insert(itemsToInsert);
-
-                if (itemsError) throw itemsError;
-            }
-
-            // Insert log
-            const { error: logError } = await supabase
-                .from('order_logs')
-                .insert({
-                    order_id: orderId,
-                    message: 'Pedido creado',
-                    user_name: orderData.userName || 'Sistema',
-                });
-
-            if (logError) throw logError;
+            if (error) throw error;
 
             // Refresh orders
             await fetchOrders();
-            return orderId;
+            return orderId as string;
         } catch (err: any) {
             console.error('Error creating order:', err);
             throw err;
@@ -384,65 +337,35 @@ export function useOrders() {
         }
     };
 
-    // Update order
+    // Update order — update + item replacement + log are done atomically via
+    // a single Postgres function (update_order_with_items), so a mid-way
+    // failure can never leave the order with zero items.
     const updateOrder = async (orderId: string, orderData: Partial<Order>) => {
         try {
-            // Update order
-            const { error: orderError } = await supabase
-                .from('orders')
-                .update({
-                    client_name: orderData.clientName,
-                    client_rtn: orderData.clientRtn ?? null,
-                    client_phone: orderData.clientPhone ?? null,
-                    destination_name: orderData.destinationName,
-                    order_type: orderData.orderType,
-                    warehouse_id: orderData.warehouseId,
-                    warehouse_name: orderData.warehouseName,
-                    city_id: orderData.cityId,
-                    city_name: orderData.cityName,
-                    status: orderData.status,
-                    delivery_date: orderData.deliveryDate ?? null,
-                })
-                .eq('id', orderId);
-
-            if (orderError) throw orderError;
-
-            // Delete existing items
-            const { error: deleteError } = await supabase
-                .from('order_items')
-                .delete()
-                .eq('order_id', orderId);
-
-            if (deleteError) throw deleteError;
-
-            // Insert new items
-            if (orderData.items && orderData.items.length > 0) {
-                const itemsToInsert = orderData.items.map(item => ({
-                    order_id: orderId,
-                    product_id: item.productId,
-                    product_name: item.productName,
-                    presentation_id: item.presentationId,
-                    presentation_name: item.presentationName,
+            const { error } = await supabase.rpc('update_order_with_items', {
+                p_order_id: orderId,
+                p_client_name: orderData.clientName,
+                p_client_rtn: orderData.clientRtn ?? null,
+                p_client_phone: orderData.clientPhone ?? null,
+                p_destination_name: orderData.destinationName,
+                p_order_type: orderData.orderType,
+                p_warehouse_id: orderData.warehouseId,
+                p_warehouse_name: orderData.warehouseName,
+                p_city_id: orderData.cityId,
+                p_city_name: orderData.cityName,
+                p_status: orderData.status,
+                p_delivery_date: orderData.deliveryDate ?? null,
+                p_user_name: orderData.userName || 'Sistema',
+                p_items: (orderData.items || []).map(item => ({
+                    productId: item.productId,
+                    productName: item.productName,
+                    presentationId: item.presentationId,
+                    presentationName: item.presentationName,
                     quantity: item.quantity,
-                }));
+                })),
+            });
 
-                const { error: itemsError } = await supabase
-                    .from('order_items')
-                    .insert(itemsToInsert);
-
-                if (itemsError) throw itemsError;
-            }
-
-            // Add log
-            const { error: logError } = await supabase
-                .from('order_logs')
-                .insert({
-                    order_id: orderId,
-                    message: 'Pedido actualizado',
-                    user_name: orderData.userName || 'Sistema',
-                });
-
-            if (logError) throw logError;
+            if (error) throw error;
 
             // Refresh orders
             await fetchOrders();

@@ -364,9 +364,20 @@ export const SellerDashboard = ({
     };
 
     const handleSubmit = () => {
-        if (cart.length === 0) return;
+        if (cart.length === 0) {
+            addToast("Agrega al menos un producto al pedido", 'warning');
+            return;
+        }
         if (!clientName.trim()) {
             addToast("Por favor ingrese el nombre del Cliente / Negocio", 'warning');
+            return;
+        }
+        if (clientRtn && clientRtn.length !== 13 && clientRtn.length !== 14) {
+            addToast("El RTN debe tener 13 o 14 dígitos", 'warning');
+            return;
+        }
+        if (clientPhone && clientPhone.replace(/\D/g, '').length !== 8) {
+            addToast("El teléfono debe tener 8 dígitos", 'warning');
             return;
         }
 

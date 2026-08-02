@@ -9,3 +9,4 @@ export { TableSkeleton } from './TableSkeleton';
 export { CardSkeleton } from './CardSkeleton';
 export { ChartSkeleton } from './ChartSkeleton';
 export { KPISkeleton } from './KPISkeleton';
+export { ErrorBoundary } from './ErrorBoundary';
