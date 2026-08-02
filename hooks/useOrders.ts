@@ -428,7 +428,13 @@ export function useOrders() {
 
     // Subscribe to real-time changes + polling fallback
     useEffect(() => {
-        fetchOrders(0);
+        let active = true;
+        // Wait for Supabase to finish restoring a persisted session before the
+        // first query — otherwise it can go out as an anonymous request and RLS
+        // silently returns 0 rows (no error), which nothing here would retry.
+        supabase.auth.getSession().finally(() => {
+            if (active) fetchOrders(0);
+        });
 
         // Set up real-time subscription
         const subscription = supabase
@@ -506,6 +512,7 @@ export function useOrders() {
         }, 60000);
 
         return () => {
+            active = false;
             subscription.unsubscribe();
             clearInterval(pollInterval);
         };

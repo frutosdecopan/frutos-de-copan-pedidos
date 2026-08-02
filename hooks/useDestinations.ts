@@ -109,7 +109,14 @@ export const useDestinations = () => {
     };
 
     useEffect(() => {
-        fetchDestinations();
+        let active = true;
+        // Wait for Supabase to finish restoring a persisted session before the
+        // first query — otherwise it can go out as an anonymous request and RLS
+        // silently returns 0 rows (no error, and nothing here would retry).
+        supabase.auth.getSession().finally(() => {
+            if (active) fetchDestinations();
+        });
+        return () => { active = false; };
     }, []);
 
     return {

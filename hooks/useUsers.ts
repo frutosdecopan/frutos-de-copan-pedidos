@@ -202,7 +202,13 @@ export function useUsers() {
 
     // Subscribe to real-time changes + polling fallback
     useEffect(() => {
-        fetchUsers();
+        let active = true;
+        // Wait for Supabase to finish restoring a persisted session before the
+        // first query — otherwise it can go out as an anonymous request and RLS
+        // silently returns 0 rows (no error), which nothing here would retry.
+        supabase.auth.getSession().finally(() => {
+            if (active) fetchUsers();
+        });
 
         const subscription = supabase
             .channel('users_channel')
@@ -218,6 +224,7 @@ export function useUsers() {
         }, 30000);
 
         return () => {
+            active = false;
             subscription.unsubscribe();
             clearInterval(pollInterval);
         };
