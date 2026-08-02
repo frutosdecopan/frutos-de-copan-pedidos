@@ -432,6 +432,7 @@ export const SellerDashboard = ({
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setHeaderCollapsed(!headerCollapsed)}
+                                aria-label={headerCollapsed ? 'Expandir encabezado' : 'Colapsar encabezado'}
                                 className="md:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-2"
                             >
                                 {headerCollapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
@@ -586,6 +587,7 @@ export const SellerDashboard = ({
                                                 <div className="flex items-center gap-2">
                                                     <button
                                                         onClick={() => updateCart(product.id, pres.id, -1)}
+                                                        aria-label={`Disminuir cantidad de ${pres.name}`}
                                                         className={`w-8 h-8 flex items-center justify-center rounded-full border ${qty > 0 ? 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-brand-600 dark:text-brand-400 hover:bg-gray-50 dark:hover:bg-gray-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 border-transparent'}`}
                                                     >
                                                         -
@@ -606,6 +608,7 @@ export const SellerDashboard = ({
                                                     />
                                                     <button
                                                         onClick={() => updateCart(product.id, pres.id, 1)}
+                                                        aria-label={`Aumentar cantidad de ${pres.name}`}
                                                         className="w-8 h-8 flex items-center justify-center rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-sm active:bg-brand-700"
                                                     >
                                                         +
@@ -1012,6 +1015,7 @@ export const SellerDashboard = ({
                             </h3>
                             <button
                                 onClick={() => setShowCommentsModal(false)}
+                                aria-label="Cerrar"
                                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
                             >
                                 <X className="w-5 h-5" />

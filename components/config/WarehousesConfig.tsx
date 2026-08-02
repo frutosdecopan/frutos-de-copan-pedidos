@@ -112,10 +112,10 @@ export const WarehousesConfig: FC = () => {
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <div className="flex justify-end gap-2">
-                                            <button onClick={() => handleOpenModal(warehouse)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg">
+                                            <button onClick={() => handleOpenModal(warehouse)} aria-label="Editar bodega" title="Editar" className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg">
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
-                                            <button onClick={() => setDeleteConfirm(warehouse.id)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg">
+                                            <button onClick={() => setDeleteConfirm(warehouse.id)} aria-label="Eliminar bodega" title="Eliminar" className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg">
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>

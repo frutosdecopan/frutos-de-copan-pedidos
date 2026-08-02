@@ -107,6 +107,7 @@ export const OrderTypesConfig: FC = () => {
                                     onClick={() => handleOpenModal({ id: type.id, name: type.name })}
                                     className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-lg transition-colors"
                                     title="Editar"
+                                    aria-label="Editar tipo de pedido"
                                 >
                                     <Edit2 className="w-4 h-4" />
                                 </button>
@@ -114,6 +115,7 @@ export const OrderTypesConfig: FC = () => {
                                     onClick={() => setDeleteConfirm(type.id)}
                                     className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-lg transition-colors"
                                     title="Eliminar"
+                                    aria-label="Eliminar tipo de pedido"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>

@@ -369,6 +369,7 @@ const App = () => {
                 orders={orders}
                 onUpdateStatus={handleUpdateStatus}
                 onLogout={handleLogout}
+                isLoadingOrders={ordersLoading}
               />
             )}
             {currentView === 'users' && (

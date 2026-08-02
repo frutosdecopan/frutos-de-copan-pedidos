@@ -99,10 +99,10 @@ export const CitiesConfig: FC = () => {
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <div className="flex justify-end gap-2">
-                                            <button onClick={() => handleOpenModal(city)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg">
+                                            <button onClick={() => handleOpenModal(city)} aria-label="Editar ciudad" title="Editar" className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg">
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
-                                            <button onClick={() => setDeleteConfirm(city.id)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg">
+                                            <button onClick={() => setDeleteConfirm(city.id)} aria-label="Eliminar ciudad" title="Eliminar" className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg">
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>

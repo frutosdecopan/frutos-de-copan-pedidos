@@ -86,10 +86,10 @@ export const DestinationsConfig: FC = () => {
                         <div key={dest.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <span className="font-medium text-gray-900 dark:text-white">{dest.name}</span>
                             <div className="flex gap-2">
-                                <button onClick={() => handleOpenModal(dest)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg">
+                                <button onClick={() => handleOpenModal(dest)} aria-label="Editar destino" title="Editar" className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg">
                                     <Edit2 className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => setDeleteConfirm(dest.id)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg">
+                                <button onClick={() => setDeleteConfirm(dest.id)} aria-label="Eliminar destino" title="Eliminar" className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg">
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>

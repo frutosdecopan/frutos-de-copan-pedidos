@@ -86,10 +86,10 @@ export const CategoriesConfig: FC = () => {
                         <div key={cat.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <span className="font-medium text-gray-900 dark:text-white">{cat.name}</span>
                             <div className="flex gap-2">
-                                <button onClick={() => handleOpenModal(cat)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg">
+                                <button onClick={() => handleOpenModal(cat)} aria-label="Editar categoría" title="Editar" className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg">
                                     <Edit2 className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => setDeleteConfirm(cat.id)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg">
+                                <button onClick={() => setDeleteConfirm(cat.id)} aria-label="Eliminar categoría" title="Eliminar" className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg">
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>

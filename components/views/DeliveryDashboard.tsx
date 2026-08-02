@@ -1,16 +1,17 @@
 import { FC, useState, useMemo } from 'react';
 import { Package, CheckCircle2, MapPin } from 'lucide-react';
 import { User, Order, OrderStatus } from '../../types';
-import { Logo, TypeBadge, Button } from '../common';
+import { Logo, TypeBadge, Button, CardSkeleton } from '../common';
 
 interface DeliveryDashboardProps {
     user: User;
     orders: Order[];
     onUpdateStatus: (id: string, status: OrderStatus) => void;
     onLogout: () => void;
+    isLoadingOrders?: boolean;
 }
 
-export const DeliveryDashboard: FC<DeliveryDashboardProps> = ({ user, orders, onUpdateStatus }) => {
+export const DeliveryDashboard: FC<DeliveryDashboardProps> = ({ user, orders, onUpdateStatus, isLoadingOrders }) => {
     const [activeTab, setActiveTab] = useState<'pre' | 'pending' | 'history'>('pre');
 
     const myOrders = useMemo(() => {
@@ -70,7 +71,9 @@ export const DeliveryDashboard: FC<DeliveryDashboardProps> = ({ user, orders, on
                         <p>Estos pedidos están asignados a ti. <strong>Verifica que los productos estén en tu vehículo.</strong> Bodega los pasará a "En Ruta" cuando estén listos para salir.</p>
                     </div>
                 )}
-                {displayOrders.length === 0 ? (
+                {isLoadingOrders && myOrders.length === 0 ? (
+                    <CardSkeleton count={3} />
+                ) : displayOrders.length === 0 ? (
                     <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
                         <Package className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                         <p className="text-gray-500 dark:text-gray-400">No hay pedidos en esta lista.</p>

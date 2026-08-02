@@ -190,6 +190,7 @@ export const ProductsConfig: FC = () => {
                                                 onClick={() => handleOpenModal(product)}
                                                 className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg transition-colors"
                                                 title="Editar"
+                                                aria-label="Editar producto"
                                             >
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
@@ -197,6 +198,7 @@ export const ProductsConfig: FC = () => {
                                                 onClick={() => setDeleteConfirm(product.id)}
                                                 className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg transition-colors"
                                                 title="Eliminar"
+                                                aria-label="Eliminar producto"
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>

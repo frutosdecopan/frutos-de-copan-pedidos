@@ -79,6 +79,7 @@ export const OrderComments: FC<OrderCommentsProps> = ({ comments, onAddComment, 
                     <button
                         type="submit"
                         disabled={!newComment.trim() || submitting}
+                        aria-label="Enviar comentario"
                         className="bg-brand-600 hover:bg-brand-700 text-white p-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         {submitting ? <span className="animate-spin text-xs">⏳</span> : <Send className="w-4 h-4" />}

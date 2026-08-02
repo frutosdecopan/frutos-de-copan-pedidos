@@ -311,7 +311,7 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                         {order.status === OrderStatus.REJECTED ? 'Rechazado' : 'Finalizado'}
                     </div>
                     <div className="flex gap-1">
-                        <button onClick={() => handleOpenComments(order)} className={`${btnClass} ${getStyle('blue')} flex items-center justify-center relative`}>
+                        <button onClick={() => handleOpenComments(order)} aria-label="Ver comentarios" className={`${btnClass} ${getStyle('blue')} flex items-center justify-center relative`}>
                             <MessageSquare className="w-3 h-3 mr-1" />
                             {order.comments && order.comments.length > 0 && (
                                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] w-3 h-3 flex items-center justify-center rounded-full">
@@ -360,7 +360,7 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                                 </button>
                             )}
                             <div className="flex gap-1 justify-end w-full">
-                                <button onClick={() => handleOpenComments(order)} className={`${btnClass} ${getStyle('blue')} flex items-center justify-center relative flex-1`}>
+                                <button onClick={() => handleOpenComments(order)} aria-label="Ver comentarios" className={`${btnClass} ${getStyle('blue')} flex items-center justify-center relative flex-1`}>
                                     <MessageSquare className="w-3 h-3" />
                                     {order.comments && order.comments.length > 0 && (
                                         <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] w-3 h-3 flex items-center justify-center rounded-full border border-white">
@@ -369,11 +369,11 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                                     )}
                                 </button>
                                 {(user.role === UserRole.WAREHOUSE || user.role === UserRole.ADMIN) && (order.status === OrderStatus.DISPATCH) && (
-                                    <button onClick={() => onEditOrder(order)} className={`${btnClass} ${getStyle('gray')} flex items-center justify-center flex-1`}>
+                                    <button onClick={() => onEditOrder(order)} aria-label="Editar pedido" className={`${btnClass} ${getStyle('gray')} flex items-center justify-center flex-1`}>
                                         <Edit2 className="w-3 h-3" />
                                     </button>
                                 )}
-                                <button onClick={() => handleOpenHistory(order)} className={`${btnClass} ${getStyle('gray')} flex items-center justify-center flex-1`}>
+                                <button onClick={() => handleOpenHistory(order)} aria-label="Ver historial" className={`${btnClass} ${getStyle('gray')} flex items-center justify-center flex-1`}>
                                     <Clock className="w-3 h-3" />
                                 </button>
                             </div>
@@ -402,7 +402,7 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                             )}
                             <button onClick={() => handleStatusChange(order, OrderStatus.DELIVERED)} className={`${btnClass} ${getStyle('green')}`}>Entregado</button>
                             <div className="flex gap-1 justify-end w-full">
-                                <button onClick={() => handleOpenComments(order)} className={`${btnClass} ${getStyle('blue')} flex items-center justify-center relative flex-1`}>
+                                <button onClick={() => handleOpenComments(order)} aria-label="Ver comentarios" className={`${btnClass} ${getStyle('blue')} flex items-center justify-center relative flex-1`}>
                                     <MessageSquare className="w-3 h-3" />
                                     {order.comments && order.comments.length > 0 && (
                                         <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] w-3 h-3 flex items-center justify-center rounded-full border border-white">
@@ -411,11 +411,11 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                                     )}
                                 </button>
                                 {(user.role === UserRole.WAREHOUSE || user.role === UserRole.ADMIN) && (order.status === OrderStatus.DISPATCH) && (
-                                    <button onClick={() => onEditOrder(order)} className={`${btnClass} ${getStyle('gray')} flex items-center justify-center flex-1`}>
+                                    <button onClick={() => onEditOrder(order)} aria-label="Editar pedido" className={`${btnClass} ${getStyle('gray')} flex items-center justify-center flex-1`}>
                                         <Edit2 className="w-3 h-3" />
                                     </button>
                                 )}
-                                <button onClick={() => handleOpenHistory(order)} className={`${btnClass} ${getStyle('gray')} flex items-center justify-center flex-1`}>
+                                <button onClick={() => handleOpenHistory(order)} aria-label="Ver historial" className={`${btnClass} ${getStyle('gray')} flex items-center justify-center flex-1`}>
                                     <Clock className="w-3 h-3" />
                                 </button>
                             </div>
@@ -663,109 +663,190 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
             {/* List / Consolidated View */}
             <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
                 {activeTab === 'orders' ? (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Pedido</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Cliente</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Destino / Origen</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Estado</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Repartidor</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase text-right">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                                {isFiltering ? (
-                                    <tr><td colSpan={6} className="p-12 text-center text-gray-500 dark:text-gray-400">
-                                        <div className="flex flex-col items-center justify-center gap-2">
-                                            <div className="animate-spin h-6 w-6 border-2 border-brand-500 border-t-transparent rounded-full" />
-                                            <p>Buscando pedidos que coincidan con los filtros...</p>
-                                        </div>
-                                    </td></tr>
-                                ) : filterFetchError ? (
-                                    <tr><td colSpan={6} className="p-12 text-center text-red-500 dark:text-red-400">
-                                        <div className="flex flex-col items-center justify-center gap-2">
-                                            <p>Error al aplicar filtros: {filterFetchError}</p>
-                                        </div>
-                                    </td></tr>
-                                ) : displayedOrders.length === 0 ? (
-                                    <tr><td colSpan={6} className="p-12 text-center text-gray-500 dark:text-gray-400">
-                                        <div className="flex flex-col items-center justify-center gap-2">
-                                            <Search className="w-8 h-8 opacity-20" />
-                                            <p>No se encontraron pedidos con los filtros actuales.</p>
-                                            <button onClick={clearFilters} className="text-brand-600 hover:underline text-sm font-medium">Limpiar búsqueda</button>
-                                        </div>
-                                    </td></tr>
-                                ) : (
-                                    displayedOrders.map(order => (
-                                        <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col gap-1">
+                    isFiltering ? (
+                        <div className="p-12 text-center text-gray-500 dark:text-gray-400">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                                <div className="animate-spin h-6 w-6 border-2 border-brand-500 border-t-transparent rounded-full" />
+                                <p>Buscando pedidos que coincidan con los filtros...</p>
+                            </div>
+                        </div>
+                    ) : filterFetchError ? (
+                        <div className="p-12 text-center text-red-500 dark:text-red-400">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                                <p>Error al aplicar filtros: {filterFetchError}</p>
+                            </div>
+                        </div>
+                    ) : displayedOrders.length === 0 ? (
+                        <div className="p-12 text-center text-gray-500 dark:text-gray-400">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                                <Search className="w-8 h-8 opacity-20" />
+                                <p>No se encontraron pedidos con los filtros actuales.</p>
+                                <button onClick={clearFilters} className="text-brand-600 hover:underline text-sm font-medium">Limpiar búsqueda</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Desktop Table */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                                            <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Pedido</th>
+                                            <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Cliente</th>
+                                            <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Destino / Origen</th>
+                                            <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Estado</th>
+                                            <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Repartidor</th>
+                                            <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase text-right">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                        {displayedOrders.map(order => (
+                                            <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="font-mono text-xs font-bold text-gray-500 dark:text-gray-400">#{order.id}</span>
+                                                        <TypeBadge type={order.orderType} />
+                                                        <div className="text-xs text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1" title="Vendedor">
+                                                            <Users className="w-3 h-3" /> {order.userName}
+                                                        </div>
+                                                        {(order.clientRtn || order.clientPhone) && (
+                                                            <div className="text-xs text-gray-500 dark:text-gray-400 flex flex-col gap-0.5 mt-0.5 border-t border-gray-100 dark:border-gray-800 pt-1">
+                                                                {order.clientRtn && (
+                                                                    <span>RTN: <span className="font-medium text-gray-700 dark:text-gray-300">{order.clientRtn}</span></span>
+                                                                )}
+                                                                {order.clientPhone && (
+                                                                    <span>Tel: <span className="font-medium text-gray-700 dark:text-gray-300">{order.clientPhone}</span></span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="font-medium text-gray-900 dark:text-white mb-1">{order.clientName}</div>
+                                                    <div className="space-y-1">
+                                                        {order.items.map((item, idx) => (
+                                                            <div key={idx} className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                                                <span className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded font-mono font-bold">
+                                                                    {item.quantity}
+                                                                </span>
+                                                                <span>{item.presentationName} de {item.productName}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-gray-600 dark:text-gray-300 text-sm">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium">{order.destinationName}</span>
+                                                        <span className="text-xs text-gray-400">Desde: {order.warehouseName}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4"><StatusBadge status={order.status} /></td>
+                                                <td className="px-6 py-4">
+                                                    <select
+                                                        value={order.assignedDeliveryId || ''}
+                                                        onChange={(e) => handleDeliveryAssignChange(order, e.target.value)}
+                                                        className="text-sm p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand-500 focus:outline-none w-full max-w-[180px] disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        disabled={
+                                                            (user.role !== UserRole.ADMIN && user.role !== UserRole.WAREHOUSE && user.role !== UserRole.PRODUCTION) ||
+                                                            order.status === OrderStatus.DELIVERED ||
+                                                            order.status === OrderStatus.CANCELLED ||
+                                                            order.status === OrderStatus.REJECTED
+                                                        }
+                                                    >
+                                                        <option value="">Sin asignar</option>
+                                                        {availableDeliveryUsers.map(u => (
+                                                            <option key={u.id} value={u.id}>{u.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {renderActions(order)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Mobile Cards */}
+                            <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-800">
+                                {displayedOrders.map(order => (
+                                    <div key={order.id} className="p-4 flex flex-col gap-3">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
                                                     <span className="font-mono text-xs font-bold text-gray-500 dark:text-gray-400">#{order.id}</span>
                                                     <TypeBadge type={order.orderType} />
-                                                    <div className="text-xs text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</div>
-                                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1" title="Vendedor">
-                                                        <Users className="w-3 h-3" /> {order.userName}
+                                                </div>
+                                                <div className="text-xs text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1" title="Vendedor">
+                                                    <Users className="w-3 h-3" /> {order.userName}
+                                                </div>
+                                            </div>
+                                            <StatusBadge status={order.status} />
+                                        </div>
+
+                                        {(order.clientRtn || order.clientPhone) && (
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 flex flex-col gap-0.5 border-t border-gray-100 dark:border-gray-800 pt-2">
+                                                {order.clientRtn && (
+                                                    <span>RTN: <span className="font-medium text-gray-700 dark:text-gray-300">{order.clientRtn}</span></span>
+                                                )}
+                                                {order.clientPhone && (
+                                                    <span>Tel: <span className="font-medium text-gray-700 dark:text-gray-300">{order.clientPhone}</span></span>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <div className="font-medium text-gray-900 dark:text-white mb-1">{order.clientName}</div>
+                                            <div className="space-y-1">
+                                                {order.items.map((item, idx) => (
+                                                    <div key={idx} className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                                        <span className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded font-mono font-bold">
+                                                            {item.quantity}
+                                                        </span>
+                                                        <span>{item.presentationName} de {item.productName}</span>
                                                     </div>
-                                                    {(order.clientRtn || order.clientPhone) && (
-                                                        <div className="text-xs text-gray-500 dark:text-gray-400 flex flex-col gap-0.5 mt-0.5 border-t border-gray-100 dark:border-gray-800 pt-1">
-                                                            {order.clientRtn && (
-                                                                <span>RTN: <span className="font-medium text-gray-700 dark:text-gray-300">{order.clientRtn}</span></span>
-                                                            )}
-                                                            {order.clientPhone && (
-                                                                <span>Tel: <span className="font-medium text-gray-700 dark:text-gray-300">{order.clientPhone}</span></span>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="font-medium text-gray-900 dark:text-white mb-1">{order.clientName}</div>
-                                                <div className="space-y-1">
-                                                    {order.items.map((item, idx) => (
-                                                        <div key={idx} className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                                            <span className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded font-mono font-bold">
-                                                                {item.quantity}
-                                                            </span>
-                                                            <span>{item.presentationName} de {item.productName}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-gray-600 dark:text-gray-300 text-sm">
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium">{order.destinationName}</span>
-                                                    <span className="text-xs text-gray-400">Desde: {order.warehouseName}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4"><StatusBadge status={order.status} /></td>
-                                            <td className="px-6 py-4">
-                                                <select
-                                                    value={order.assignedDeliveryId || ''}
-                                                    onChange={(e) => handleDeliveryAssignChange(order, e.target.value)}
-                                                    className="text-sm p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand-500 focus:outline-none w-full max-w-[180px] disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    disabled={
-                                                        (user.role !== UserRole.ADMIN && user.role !== UserRole.WAREHOUSE && user.role !== UserRole.PRODUCTION) ||
-                                                        order.status === OrderStatus.DELIVERED ||
-                                                        order.status === OrderStatus.CANCELLED ||
-                                                        order.status === OrderStatus.REJECTED
-                                                    }
-                                                >
-                                                    <option value="">Sin asignar</option>
-                                                    {availableDeliveryUsers.map(u => (
-                                                        <option key={u.id} value={u.id}>{u.name}</option>
-                                                    ))}
-                                                </select>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                {renderActions(order)}
-                                            </td>
-                                        </tr>
-                                    )))}
-                            </tbody>
-                        </table>
-                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="text-sm text-gray-600 dark:text-gray-300 border-t border-gray-100 dark:border-gray-800 pt-2">
+                                            <div className="flex flex-col">
+                                                <span className="font-medium">{order.destinationName}</span>
+                                                <span className="text-xs text-gray-400">Desde: {order.warehouseName}</span>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Repartidor</label>
+                                            <select
+                                                value={order.assignedDeliveryId || ''}
+                                                onChange={(e) => handleDeliveryAssignChange(order, e.target.value)}
+                                                className="text-sm p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand-500 focus:outline-none w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                                                disabled={
+                                                    (user.role !== UserRole.ADMIN && user.role !== UserRole.WAREHOUSE && user.role !== UserRole.PRODUCTION) ||
+                                                    order.status === OrderStatus.DELIVERED ||
+                                                    order.status === OrderStatus.CANCELLED ||
+                                                    order.status === OrderStatus.REJECTED
+                                                }
+                                            >
+                                                <option value="">Sin asignar</option>
+                                                {availableDeliveryUsers.map(u => (
+                                                    <option key={u.id} value={u.id}>{u.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="flex justify-end pt-1 border-t border-gray-100 dark:border-gray-800">
+                                            {renderActions(order, true)}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )
                 ) : (
                     <div className="p-6">
                         <h3 className="font-bold text-gray-900 dark:text-white mb-4">Consolidado de Productos (Pendientes)</h3>
@@ -854,6 +935,7 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                             </h3>
                             <button
                                 onClick={() => setShowHistoryModal(false)}
+                                aria-label="Cerrar"
                                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
                             >
                                 <X className="w-5 h-5" />
@@ -887,6 +969,7 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                             </h3>
                             <button
                                 onClick={() => setShowCommentsModal(false)}
+                                aria-label="Cerrar"
                                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
                             >
                                 <X className="w-5 h-5" />
