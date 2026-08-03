@@ -92,6 +92,9 @@ function playNotificationSound(type: 'new_order' | 'assigned') {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
+// Un pedido solo puede sonar como "nuevo" si se creó dentro de esta ventana.
+const NEW_ORDER_WINDOW_MS = 2 * 60 * 1000;
+
 // Deriva notificaciones comparando el arreglo `orders` (ya mantenido al día por
 // useOrders, con su propia suscripción Realtime) contra su valor anterior, en
 // vez de abrir una segunda suscripción `postgres_changes` redundante sobre la
@@ -125,7 +128,16 @@ export function useNotifications(user: User | null, orders: Order[], ordersLoadi
             const previous = previousById.get(order.id);
 
             // 1. BODEGA / ADMIN / PRODUCCIÓN — Nuevo pedido recibido
+            // Además de "no estaba en la foto anterior", exige que el pedido
+            // se haya creado hace poco. Esto evita que un problema de timing
+            // en la foto inicial (p. ej. bajo React StrictMode, o un refetch
+            // con filtros) haga sonar una notificación por cada pedido viejo
+            // que "parezca" nuevo — un pedido realmente viejo nunca suena,
+            // sin importar por qué la comparación se vio rara.
             if (!previous) {
+                const isRecentlyCreated = Date.now() - new Date(order.createdAt).getTime() < NEW_ORDER_WINDOW_MS;
+                if (!isRecentlyCreated) continue;
+
                 const isRelevant =
                     user.roles.includes(UserRole.ADMIN) ||
                     (user.roles.includes(UserRole.WAREHOUSE) && user.assignedCities.includes(order.cityId)) ||
