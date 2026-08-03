@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, sessionReady } from '../lib/supabase';
 import { User, UserRole } from '../types';
 
 const PROFILE_COLUMNS = 'id, name, username, email, role, roles, assigned_cities, unavailable_dates, is_active, auth_user_id';
@@ -221,7 +221,7 @@ export function useUsers() {
         // Wait for Supabase to finish restoring a persisted session before the
         // first query — otherwise it can go out as an anonymous request and RLS
         // silently returns 0 rows (no error), which nothing here would retry.
-        supabase.auth.getSession().finally(() => {
+        sessionReady.finally(() => {
             if (active) fetchUsers();
         });
 

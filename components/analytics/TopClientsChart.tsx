@@ -1,6 +1,8 @@
 import { FC, useMemo } from 'react';
 import { Order } from '../../types';
 import { TrendingUp, Award, Calendar, Package } from 'lucide-react';
+import { useClientNameRules } from '../../hooks/useClientNameRules';
+import { resolveClientName } from '../../utils/resolveClientName';
 
 interface TopClientsChartProps {
     orders: Order[];
@@ -16,11 +18,18 @@ interface ClientMetrics {
 }
 
 export const TopClientsChart: FC<TopClientsChartProps> = ({ orders, isDark }) => {
+    const { clientNameRules } = useClientNameRules();
+
     const topClients = useMemo(() => {
         const clientMap = new Map<string, { totalOrders: number; totalUnits: number; lastOrderDate: string }>();
 
         orders.forEach(order => {
-            const existing = clientMap.get(order.clientName) || {
+            // Se agrupa por el nombre unificado (ej. "Sugerido barato #1" y
+            // "Barato Centro" cuentan como el mismo cliente "Barato"), no por
+            // el clientName crudo — solo afecta esta agrupación de reportería,
+            // nunca el dato original guardado en el pedido.
+            const groupName = resolveClientName(order.clientName, clientNameRules);
+            const existing = clientMap.get(groupName) || {
                 totalOrders: 0,
                 totalUnits: 0,
                 lastOrderDate: order.createdAt
@@ -28,7 +37,7 @@ export const TopClientsChart: FC<TopClientsChartProps> = ({ orders, isDark }) =>
 
             const totalUnits = order.items.reduce((sum, item) => sum + item.quantity, 0);
 
-            clientMap.set(order.clientName, {
+            clientMap.set(groupName, {
                 totalOrders: existing.totalOrders + 1,
                 totalUnits: existing.totalUnits + totalUnits,
                 lastOrderDate: new Date(order.createdAt) > new Date(existing.lastOrderDate)
@@ -52,7 +61,7 @@ export const TopClientsChart: FC<TopClientsChartProps> = ({ orders, isDark }) =>
             })
             .sort((a, b) => b.totalOrders - a.totalOrders)
             .slice(0, 10);
-    }, [orders]);
+    }, [orders, clientNameRules]);
 
     const getFrequencyBadge = (frequency: string) => {
         const badges = {

@@ -1,5 +1,5 @@
 import { FC, useState } from 'react';
-import { Settings, Package, Layers, MapPin, Building2, Navigation, Tag, ShoppingBag } from 'lucide-react';
+import { Settings, Package, Layers, MapPin, Building2, Navigation, Tag, ShoppingBag, Merge } from 'lucide-react';
 import { UserRole } from '../../types';
 import { ProductsConfig } from '../config/ProductsConfig';
 import { PresentationsConfig } from '../config/PresentationsConfig';
@@ -8,12 +8,13 @@ import { WarehousesConfig } from '../config/WarehousesConfig';
 import { DestinationsConfig } from '../config/DestinationsConfig';
 import { CategoriesConfig } from '../config/CategoriesConfig';
 import { OrderTypesConfig } from '../config/OrderTypesConfig';
+import { ClientNameRulesConfig } from '../config/ClientNameRulesConfig';
 
 interface ConfigurationViewProps {
     user: { role: UserRole };
 }
 
-type TabType = 'products' | 'presentations' | 'cities' | 'warehouses' | 'destinations' | 'categories' | 'ordertypes';
+type TabType = 'products' | 'presentations' | 'cities' | 'warehouses' | 'destinations' | 'categories' | 'ordertypes' | 'clientnames';
 
 export const ConfigurationView: FC<ConfigurationViewProps> = ({ user }) => {
     const [activeTab, setActiveTab] = useState<TabType>('products');
@@ -39,6 +40,7 @@ export const ConfigurationView: FC<ConfigurationViewProps> = ({ user }) => {
         { id: 'destinations' as TabType, label: 'Destinos', icon: Navigation },
         { id: 'categories' as TabType, label: 'Categorías', icon: Tag },
         { id: 'ordertypes' as TabType, label: 'Tipos de Pedido', icon: ShoppingBag },
+        { id: 'clientnames' as TabType, label: 'Clientes Unificados', icon: Merge },
     ];
 
     return (
@@ -86,6 +88,7 @@ export const ConfigurationView: FC<ConfigurationViewProps> = ({ user }) => {
                 {activeTab === 'destinations' && <DestinationsConfig />}
                 {activeTab === 'categories' && <CategoriesConfig />}
                 {activeTab === 'ordertypes' && <OrderTypesConfig />}
+                {activeTab === 'clientnames' && <ClientNameRulesConfig />}
             </div>
         </div>
     );

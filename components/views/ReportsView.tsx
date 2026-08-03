@@ -2,7 +2,7 @@ import { FC, useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Order, OrderStatus, OrderType } from '../../types';
 import { OrderFilters } from '../../hooks/useOrders';
-import { TrendingUp, MapPin, Calendar, Download } from 'lucide-react';
+import { TrendingUp, MapPin, Calendar, Download, Package } from 'lucide-react';
 import { ChartSkeleton } from '../common';
 
 interface ReportsViewProps {
@@ -10,11 +10,14 @@ interface ReportsViewProps {
     isDark: boolean;
 }
 
-type ReportTab = 'cities' | 'period' | 'yearly';
+type ReportTab = 'cities' | 'period' | 'yearly' | 'products';
 type PeriodType = 'weekly' | 'monthly' | 'quarterly';
 type MetricType = 'orders' | 'units';
 
 const CITY_COLORS = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#f97316', '#06b6d4', '#ec4899'];
+const PRODUCT_BAR_COLOR = '#f97316';
+const TOP_PRODUCTS_LIMIT = 20;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -94,6 +97,51 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
             .map(([ciudad, v]) => ({ ciudad, ...v }))
             .sort((a, b) => b[metric === 'orders' ? 'pedidos' : 'unidades'] - a[metric === 'orders' ? 'pedidos' : 'unidades']);
     }, [filteredOrders, metric]);
+
+    // ── Tab 4: Por Producto ─────────────────────────────────────────────────
+    const productData = useMemo(() => {
+        const map: Record<string, { pedidos: number; unidades: number }> = {};
+        filteredOrders.forEach(o => {
+            o.items.forEach(item => {
+                const key = item.productName;
+                if (!map[key]) map[key] = { pedidos: 0, unidades: 0 };
+                map[key].pedidos += 1;
+                map[key].unidades += item.quantity;
+            });
+        });
+        return Object.entries(map)
+            .map(([producto, v]) => ({ producto, ...v }))
+            .sort((a, b) => b[metric === 'orders' ? 'pedidos' : 'unidades'] - a[metric === 'orders' ? 'pedidos' : 'unidades'])
+            .slice(0, TOP_PRODUCTS_LIMIT);
+    }, [filteredOrders, metric]);
+
+    // Mismo periodo inmediatamente anterior (misma duración, corrido hacia
+    // atrás), calculado sobre el dataset completo ya cargado en memoria —
+    // solo aplica cuando hay un rango de fechas seleccionado.
+    const previousPeriodProductMap = useMemo(() => {
+        if (!dateStart || !dateEnd) return null;
+
+        const start = new Date(dateStart).setHours(0, 0, 0, 0);
+        const end = new Date(dateEnd).setHours(0, 0, 0, 0);
+        const durationMs = end - start;
+        const prevEnd = start - MS_PER_DAY;
+        const prevStart = prevEnd - durationMs;
+
+        const map: Record<string, number> = {};
+        orders.forEach(o => {
+            if (filterType !== 'all' && o.orderType !== filterType) return;
+            if (filterStatus === 'active' && !isActive(o)) return;
+            if (filterStatus === 'delivered' && o.status !== OrderStatus.DELIVERED) return;
+            if (filterCity !== 'all' && o.destinationName !== filterCity) return;
+            const t = new Date(o.createdAt).setHours(0, 0, 0, 0);
+            if (t < prevStart || t > prevEnd) return;
+
+            o.items.forEach(item => {
+                map[item.productName] = (map[item.productName] || 0) + (metric === 'orders' ? 1 : item.quantity);
+            });
+        });
+        return map;
+    }, [orders, dateStart, dateEnd, filterType, filterStatus, filterCity, metric]);
 
     // ── Tab 2: Por Periodo ──────────────────────────────────────────────────
     const periodData = useMemo(() => {
@@ -330,6 +378,7 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                     { id: 'cities', label: 'Por Ciudad', icon: MapPin },
                     { id: 'period', label: 'Por Periodo', icon: Calendar },
                     { id: 'yearly', label: 'Año vs Año', icon: TrendingUp },
+                    { id: 'products', label: 'Por Producto', icon: Package },
                 ] as { id: ReportTab; label: string; icon: any }[]).map(tab => (
                     <button
                         key={tab.id}
@@ -783,6 +832,120 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                                 </table>
                             </div>
                         </div>
+                    )}
+                </div>
+            )}
+
+            {/* ── Tab: Por Producto ───────────────────────────────────────── */}
+            {activeTab === 'products' && (
+                <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <Package className="w-5 h-5 text-orange-500" /> Demanda por Producto
+                        </h2>
+                        <button
+                            onClick={() => exportCSV(
+                                productData.map(r => {
+                                    const val = metric === 'orders' ? r.pedidos : r.unidades;
+                                    const prevVal = previousPeriodProductMap?.[r.producto] ?? null;
+                                    const row: Record<string, string | number> = { Producto: r.producto, Pedidos: r.pedidos, Unidades: r.unidades };
+                                    if (prevVal !== null) {
+                                        row['vs Periodo Anterior'] = prevVal > 0 ? `${Math.round((val - prevVal) / prevVal * 100)}%` : (val > 0 ? '+100%' : '0%');
+                                    }
+                                    return row;
+                                }),
+                                'reporte_productos'
+                            )}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
+                        >
+                            <Download className="w-3.5 h-3.5" /> Exportar Excel
+                        </button>
+                    </div>
+                    <FilterBar />
+
+                    {productData.length === 0 ? (
+                        <div className="py-16 text-center text-gray-400">No hay datos para el período seleccionado.</div>
+                    ) : (
+                        <>
+                            <div className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+                                Mostrando el top {TOP_PRODUCTS_LIMIT} de productos por {metric === 'orders' ? 'pedidos' : 'unidades'}.
+                            </div>
+                            <div style={{ height: Math.max(300, productData.length * 40) }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart
+                                        layout="vertical"
+                                        data={productData}
+                                        margin={{ top: 5, right: 40, left: 8, bottom: 5 }}
+                                    >
+                                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} horizontal={false} />
+                                        <XAxis
+                                            type="number"
+                                            tick={{ fill: isDark ? '#D1D5DB' : '#374151', fontSize: 12 }}
+                                        />
+                                        <YAxis
+                                            type="category"
+                                            dataKey="producto"
+                                            width={160}
+                                            tick={{ fill: isDark ? '#E5E7EB' : '#111827', fontSize: 12, fontWeight: 600 }}
+                                        />
+                                        <Tooltip
+                                            contentStyle={tooltipStyle}
+                                            formatter={(v, name) => [v, name === 'pedidos' ? 'Pedidos' : 'Unidades']}
+                                        />
+                                        <Bar
+                                            dataKey={metric === 'orders' ? 'pedidos' : 'unidades'}
+                                            name={metric === 'orders' ? 'pedidos' : 'unidades'}
+                                            fill={PRODUCT_BAR_COLOR}
+                                            radius={[0, 6, 6, 0]}
+                                            label={{ position: 'right', fill: isDark ? '#D1D5DB' : '#374151', fontSize: 12, fontWeight: 600 }}
+                                        />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+
+                            {/* Tabla de productos */}
+                            <div className="mt-6 overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                                            <th className="text-left py-2 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Producto</th>
+                                            <th className="text-right py-2 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Pedidos</th>
+                                            <th className="text-right py-2 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Unidades</th>
+                                            {previousPeriodProductMap && (
+                                                <th className="text-right py-2 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">vs Periodo Anterior</th>
+                                            )}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {productData.map(row => {
+                                            const currVal = metric === 'orders' ? row.pedidos : row.unidades;
+                                            const prevVal = previousPeriodProductMap?.[row.producto] ?? null;
+                                            const pct = prevVal !== null
+                                                ? (prevVal > 0 ? Math.round((currVal - prevVal) / prevVal * 100) : (currVal > 0 ? 100 : 0))
+                                                : null;
+                                            return (
+                                                <tr key={row.producto} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                                    <td className="py-3 px-4 font-medium text-gray-900 dark:text-white">{row.producto}</td>
+                                                    <td className="py-3 px-4 text-right text-gray-700 dark:text-gray-300">{row.pedidos}</td>
+                                                    <td className="py-3 px-4 text-right text-gray-700 dark:text-gray-300">{row.unidades}</td>
+                                                    {previousPeriodProductMap && (
+                                                        <td className="py-3 px-4 text-right">
+                                                            {pct !== null ? (
+                                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${pct >= 0
+                                                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                                                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+                                                                    {pct >= 0 ? '+' : ''}{pct}%
+                                                                </span>
+                                                            ) : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
+                                                        </td>
+                                                    )}
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
                     )}
                 </div>
             )}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, sessionReady } from '../lib/supabase';
 import { City } from '../types';
 
 export const useCities = () => {
@@ -107,7 +107,7 @@ export const useCities = () => {
         // Wait for Supabase to finish restoring a persisted session before the
         // first query — otherwise it can go out as an anonymous request and RLS
         // silently returns 0 rows (no error, and nothing here would retry).
-        supabase.auth.getSession().finally(() => {
+        sessionReady.finally(() => {
             if (active) fetchCities();
         });
         return () => { active = false; };

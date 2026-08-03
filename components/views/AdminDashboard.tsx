@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
-import { Order, OrderStatus } from '../../types';
+import { Order, OrderStatus, User } from '../../types';
 import { OrderFilters } from '../../hooks/useOrders';
 import { generateAiReport } from '../../services/geminiService';
 import { useToast } from '../../ToastContext';
@@ -10,14 +10,16 @@ import { StatusChart } from '../analytics/StatusChart';
 import { KPICards } from '../analytics/KPICards';
 import { TopClientsChart } from '../analytics/TopClientsChart';
 import { TopProductsChart } from '../analytics/TopProductsChart';
+import { SellerPerformanceChart } from '../analytics/SellerPerformanceChart';
 import { KPISkeleton, ChartSkeleton } from '../common';
 
 interface AdminDashboardProps {
     isDark: boolean;
+    users: User[];
     fetchOrdersForExport: (filters: OrderFilters) => Promise<Order[]>;
 }
 
-export const AdminDashboard = ({ isDark, fetchOrdersForExport }: AdminDashboardProps) => {
+export const AdminDashboard = ({ isDark, users, fetchOrdersForExport }: AdminDashboardProps) => {
     const { addToast } = useToast();
     const [report, setReport] = useState<string | null>(null);
     const [loadingReport, setLoadingReport] = useState(false);
@@ -187,6 +189,7 @@ export const AdminDashboard = ({ isDark, fetchOrdersForExport }: AdminDashboardP
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <TopClientsChart orders={orders} isDark={isDark} />
                     <TopProductsChart orders={orders} isDark={isDark} />
+                    <SellerPerformanceChart orders={orders} users={users} isDark={isDark} />
                 </div>
             </div>
 

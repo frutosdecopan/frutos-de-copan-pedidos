@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, sessionReady } from '../lib/supabase';
 import { Order, OrderStatus } from '../types';
 import { validateStatusTransition } from '../utils/orderStatusRules';
 
@@ -465,7 +465,7 @@ export function useOrders() {
         // Wait for Supabase to finish restoring a persisted session before the
         // first query — otherwise it can go out as an anonymous request and RLS
         // silently returns 0 rows (no error), which nothing here would retry.
-        supabase.auth.getSession().finally(() => {
+        sessionReady.finally(() => {
             if (active) fetchOrders(0);
         });
 

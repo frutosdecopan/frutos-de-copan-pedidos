@@ -24,10 +24,11 @@ interface ManagementDashboardProps {
     hasMore: boolean;
     fetchOrdersForExport: (filters: OrderFilters) => Promise<Order[]>;
     isDark: boolean;
+    isLoadingOrders?: boolean;
 }
 
 export const ManagementDashboard: FC<ManagementDashboardProps> = ({
-    user, orders, users, onUpdateStatus, onAssignDelivery, onEditOrder, onAddComment, loadMore, hasMore, fetchOrdersForExport, isDark
+    user, orders, users, onUpdateStatus, onAssignDelivery, onEditOrder, onAddComment, loadMore, hasMore, fetchOrdersForExport, isDark, isLoadingOrders
 }) => {
     const { addToast } = useToast();
     const { cities, loading: citiesLoading } = useCities();
@@ -671,6 +672,15 @@ export const ManagementDashboard: FC<ManagementDashboardProps> = ({
                                 <p>Buscando pedidos que coincidan con los filtros...</p>
                             </div>
                         </div>
+                    ) : (!hasActiveFilters && isLoadingOrders && orders.length === 0) ? (
+                        <>
+                            <div className="hidden md:block p-6">
+                                <TableSkeleton rows={6} columns={6} />
+                            </div>
+                            <div className="md:hidden p-4">
+                                <CardSkeleton count={4} />
+                            </div>
+                        </>
                     ) : filterFetchError ? (
                         <div className="p-12 text-center text-red-500 dark:text-red-400">
                             <div className="flex flex-col items-center justify-center gap-2">

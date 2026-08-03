@@ -346,6 +346,7 @@ const App = () => {
             {currentView === 'dashboard' && !sessionUser.roles.includes(UserRole.SELLER) && !sessionUser.roles.includes(UserRole.DELIVERY) && (
               <AdminDashboard
                 isDark={isDark}
+                users={displayUsers}
                 fetchOrdersForExport={fetchOrdersForExport}
               />
             )}
@@ -362,6 +363,7 @@ const App = () => {
                 hasMore={hasMore}
                 fetchOrdersForExport={fetchOrdersForExport}
                 isDark={isDark}
+                isLoadingOrders={ordersLoading}
               />
             )}
             {currentView === 'delivery' && (
