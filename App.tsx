@@ -149,7 +149,7 @@ const App = () => {
   };
 
   // Push Notifications Hook
-  useNotifications(user, orders);
+  useNotifications(user, orders, ordersLoading);
 
   // Use users from Supabase
   const displayUsers = users;

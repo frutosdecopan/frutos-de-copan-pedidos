@@ -96,16 +96,19 @@ function playNotificationSound(type: 'new_order' | 'assigned') {
 // useOrders, con su propia suscripción Realtime) contra su valor anterior, en
 // vez de abrir una segunda suscripción `postgres_changes` redundante sobre la
 // misma tabla `orders`.
-export function useNotifications(user: User | null, orders: Order[]) {
+export function useNotifications(user: User | null, orders: Order[], ordersLoading: boolean) {
     const { addToast } = useToast();
     const previousOrdersRef = useRef<Order[]>([]);
-    // true hasta que capturamos la primera "foto" de orders con un usuario
-    // activo — evita notificar como "nuevo pedido" todo lo que ya existía
-    // antes de que este usuario iniciara sesión.
+    // true hasta que capturamos la primera "foto" real de orders (con un
+    // usuario activo Y la carga inicial ya terminada) — evita notificar como
+    // "nuevo pedido" todo lo que ya existía. Si solo se esperara a `user`,
+    // `orders` podía seguir vacío (fetch todavía en curso) en ese primer
+    // corte, y el siguiente corte —ya con los pedidos reales— trataba a
+    // cada uno como nuevo, disparando decenas de sonidos/toasts de golpe.
     const isFirstRunRef = useRef(true);
 
     useEffect(() => {
-        if (!user) {
+        if (!user || ordersLoading) {
             isFirstRunRef.current = true;
             return;
         }
@@ -155,5 +158,5 @@ export function useNotifications(user: User | null, orders: Order[]) {
         }
 
         previousOrdersRef.current = orders;
-    }, [orders, user, addToast]);
+    }, [orders, user, ordersLoading, addToast]);
 }
