@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, sessionReady } from '../lib/supabase';
 import { User, UserRole } from '../types';
+import { withTimeout } from '../utils/withTimeout';
 
 const PROFILE_COLUMNS = 'id, name, username, email, role, roles, assigned_cities, unavailable_dates, is_active, auth_user_id';
 
@@ -67,19 +68,22 @@ export function useUsers() {
     const [error, setError] = useState<string | null>(null);
 
     const fetchUsers = async () => {
+        const startedAt = performance.now();
         try {
             setLoading(true);
-            const { data, error } = await supabase
-                .from('users')
-                .select(PROFILE_COLUMNS)
-                .order('name');
+            const { data, error } = await withTimeout(
+                supabase.from('users').select(PROFILE_COLUMNS).order('name'),
+                15000,
+                'fetchUsers'
+            );
 
             if (error) throw error;
 
             setUsers((data || []).map(transformUser));
             setError(null);
+            console.log('[Query] users', { rows: (data || []).length, durationMs: Math.round(performance.now() - startedAt) });
         } catch (err: any) {
-            console.error('Error fetching users:', err);
+            console.error('[Query] users failed', { durationMs: Math.round(performance.now() - startedAt), error: err.message });
             setError(err.message);
         } finally {
             setLoading(false);

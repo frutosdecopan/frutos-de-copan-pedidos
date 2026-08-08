@@ -1,7 +1,8 @@
-import { useState, Suspense, lazy, useEffect } from 'react';
+import { useState, Suspense, lazy, useEffect, useRef } from 'react';
 import { UserRole, OrderStatus, Order, User, OrderItem } from './types';
 import { BarChart3, Package, ClipboardList, Truck, Users, Calendar, BarChart2, Settings } from 'lucide-react';
 import { useToast } from './ToastContext';
+import { supabase } from './lib/supabase';
 import { useOrders } from './hooks/useOrders';
 import { useUsers } from './hooks/useUsers';
 import { useCities } from './hooks/useCities';
@@ -92,8 +93,8 @@ const App = () => {
   const [currentView, setCurrentView] = useState<'login' | 'dashboard' | 'new-order' | 'edit-order' | 'users' | 'delivery' | 'availability' | 'orders' | 'all-orders' | 'config' | 'reports' | 'help'>('login');
 
   const { isDark, toggleTheme } = useTheme();
-  const { destinations } = useDestinations();
-  const { cities } = useCities();
+  const { destinations, fetchDestinations } = useDestinations();
+  const { cities, fetchCities } = useCities();
 
   // Form State Lifted to App (for Management Dashboard editing)
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
@@ -126,7 +127,8 @@ const App = () => {
     restoreSession,
     createUser,
     updateUser,
-    deleteUser
+    deleteUser,
+    refetch: refetchUsers
   } = useUsers();
 
   const {
@@ -140,7 +142,8 @@ const App = () => {
     applyFilters,
     loadMore,
     hasMore,
-    fetchOrdersForExport
+    fetchOrdersForExport,
+    refetch: refetchOrders
   } = useOrders();
 
   // Wrapper for addComment to match ManagementDashboard interface
@@ -157,6 +160,21 @@ const App = () => {
 
   const enterAppAsUser = (u: User) => {
     setUser(u);
+
+    // CAUSA RAÍZ del "queda en blanco ~2 minutos": useOrders/useUsers/useCities/
+    // useDestinations se montan en App al arrancar la app, ANTES de que exista
+    // sesión — por eso su primera consulta corre sin JWT válido, RLS la filtra
+    // en silencio (0 filas, sin error) y nada la reintentaba hasta el siguiente
+    // ciclo de polling (30s/60s), confirmado con los logs [Query] users
+    // {rows:0} / [Query] orders {rows:0} justo antes del login real. Se
+    // confirma con un login real: apenas se sabe que HAY una sesión válida
+    // (login fresco o sesión restaurada), se fuerza una recarga inmediata en
+    // vez de esperar al polling.
+    refetchOrders();
+    refetchUsers();
+    fetchCities();
+    fetchDestinations();
+
     if (u.roles.length > 1) {
       // Multi-role: mostrar pantalla de selección
       setActiveRole(null);
@@ -173,7 +191,17 @@ const App = () => {
     enterAppAsUser(loggedInUser);
   };
 
+  // Distingue un cierre de sesión que el propio usuario pidió (botón
+  // "Salir") de uno que Supabase dispara por su cuenta (ej. el refresh
+  // automático del JWT falló porque el refresh token expiró/fue revocado
+  // tras mucho tiempo en background) — en ese segundo caso, antes no había
+  // ningún listener que lo notara: el dashboard se quedaba mostrando datos
+  // vacíos/desactualizados para siempre, porque RLS ya no deja pasar
+  // ninguna consulta con un JWT inválido (ver lib/supabase.ts).
+  const isExplicitLogoutRef = useRef(false);
+
   const handleLogout = async () => {
+    isExplicitLogoutRef.current = true;
     await logout();
     setUser(null);
     setActiveRole(null);
@@ -188,6 +216,27 @@ const App = () => {
         if (restoredUser) enterAppAsUser(restoredUser);
       })
       .finally(() => setSessionChecked(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reacciona a una sesión perdida que Supabase dio por cerrada por su
+  // cuenta (no un logout manual): regresa a la pantalla de login en vez de
+  // dejar la app atascada mostrando un dashboard sin datos.
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== 'SIGNED_OUT') return;
+
+      if (isExplicitLogoutRef.current) {
+        isExplicitLogoutRef.current = false;
+        return;
+      }
+
+      setUser(null);
+      setActiveRole(null);
+      setCurrentView('login');
+      addToast('Tu sesión expiró. Inicia sesión de nuevo.', 'error');
+    });
+    return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

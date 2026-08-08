@@ -3,6 +3,7 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase, sessionReady } from '../lib/supabase';
 import { Order, OrderStatus } from '../types';
 import { validateStatusTransition } from '../utils/orderStatusRules';
+import { withTimeout } from '../utils/withTimeout';
 
 export interface OrderFilters {
     status?: OrderStatus | '';
@@ -116,6 +117,7 @@ export function useOrders() {
     // Fetch orders with pagination
     // silent=true skips the loading state (used for background polling)
     const fetchOrders = async (page = 0, append = false, silent = false, currentFilters: OrderFilters = filters) => {
+        const startedAt = performance.now();
         try {
             if (page === 0 && !silent) setLoading(true);
 
@@ -170,9 +172,11 @@ export function useOrders() {
                 query = query.or(`client_name.ilike.%${term}%,id.ilike.%${term}%`);
             }
 
-            const { data, error: fetchError } = await query
-                .order('created_at', { ascending: false })
-                .range(from, to);
+            const { data, error: fetchError } = await withTimeout(
+                query.order('created_at', { ascending: false }).range(from, to),
+                15000,
+                'fetchOrders'
+            );
 
             if (fetchError) throw fetchError;
 
@@ -196,8 +200,9 @@ export function useOrders() {
             });
 
             setError(null);
+            console.log('[Query] orders', { page, rows: newOrders.length, durationMs: Math.round(performance.now() - startedAt) });
         } catch (err: any) {
-            console.error('Error fetching orders:', err);
+            console.error('[Query] orders failed', { page, durationMs: Math.round(performance.now() - startedAt), error: err.message });
             setError(err.message);
         } finally {
             setLoading(false);
