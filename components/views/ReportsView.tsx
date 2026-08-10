@@ -61,6 +61,7 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
     // Por Semana
     const [weeklyYear, setWeeklyYear] = useState<number>(currentYear);
     const [weeklyGranularity, setWeeklyGranularity] = useState<'week' | 'month'>('week');
+    const [weeklyFilterCity, setWeeklyFilterCity] = useState<string>('all');
 
     const textColor = isDark ? '#9CA3AF' : '#6B7280';
     const gridColor = isDark ? '#374151' : '#E5E7EB';
@@ -281,6 +282,12 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
         total: number;
     }
 
+    // Ciudades que se muestran como columnas — todas, o solo una si el
+    // usuario filtró por ciudad.
+    const weeklyColumnCities = useMemo(() => {
+        return weeklyFilterCity === 'all' ? availableDestinations : [weeklyFilterCity];
+    }, [availableDestinations, weeklyFilterCity]);
+
     const weeklyCityData = useMemo(() => {
         // Bloques de 7 días de calendario: día 1-7 = Semana 1, ... 29-31 = Semana 5.
         const buckets = new Map<string, number>(); // key `${mes}|${semana}|${ciudad}`
@@ -301,7 +308,7 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                 const porCiudad: Record<string, number> = {};
                 let total = 0;
                 let hasAny = false;
-                availableDestinations.forEach(ciudad => {
+                weeklyColumnCities.forEach(ciudad => {
                     const val = buckets.get(`${mes}|${semana}|${ciudad}`) || 0;
                     porCiudad[ciudad] = val;
                     total += val;
@@ -314,18 +321,18 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
             });
         }
         return rows;
-    }, [weeklyBaseOrders, weeklyGranularity, availableDestinations, metric]);
+    }, [weeklyBaseOrders, weeklyGranularity, weeklyColumnCities, metric]);
 
     const weeklyTotals = useMemo(() => {
         const porCiudad: Record<string, number> = {};
-        availableDestinations.forEach(c => { porCiudad[c] = 0; });
+        weeklyColumnCities.forEach(c => { porCiudad[c] = 0; });
         let total = 0;
         weeklyCityData.forEach(row => {
-            availableDestinations.forEach(c => { porCiudad[c] += row.porCiudad[c] || 0; });
+            weeklyColumnCities.forEach(c => { porCiudad[c] += row.porCiudad[c] || 0; });
             total += row.total;
         });
         return { porCiudad, total };
-    }, [weeklyCityData, availableDestinations]);
+    }, [weeklyCityData, weeklyColumnCities]);
 
     // ── Shared filter bar ───────────────────────────────────────────────────
     const FilterBar = ({ showCity = true }: { showCity?: boolean }) => (
@@ -1018,7 +1025,7 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                                 const rows = weeklyCityData.map(row => {
                                     const base: Record<string, string | number> = { Año: weeklyYear, Mes: row.mesLabel };
                                     if (row.semana !== null) base['Semana'] = `Semana ${row.semana}`;
-                                    availableDestinations.forEach(c => { base[c] = row.porCiudad[c] || 0; });
+                                    weeklyColumnCities.forEach(c => { base[c] = row.porCiudad[c] || 0; });
                                     base['Total'] = row.total;
                                     return base;
                                 });
@@ -1061,6 +1068,15 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                         </div>
 
                         <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Ciudad</label>
+                            <select value={weeklyFilterCity} onChange={e => setWeeklyFilterCity(e.target.value)}
+                                className="p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white min-w-[140px]">
+                                <option value="all">Todas las ciudades</option>
+                                {availableDestinations.map(d => <option key={d} value={d}>{d}</option>)}
+                            </select>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
                             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tipo de pedido</label>
                             <select value={filterType} onChange={e => setFilterType(e.target.value)}
                                 className="p-2 rounded-lg border-2 border-amber-400 dark:border-amber-500 bg-white dark:bg-gray-800 text-sm font-semibold text-gray-900 dark:text-white">
@@ -1092,7 +1108,7 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                         </div>
                     </div>
 
-                    {availableDestinations.length === 0 || weeklyTotals.total === 0 ? (
+                    {weeklyColumnCities.length === 0 || weeklyTotals.total === 0 ? (
                         <div className="py-16 text-center text-gray-400">No hay datos para el año seleccionado.</div>
                     ) : (
                         <div className="overflow-x-auto">
@@ -1103,7 +1119,7 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                                         {weeklyGranularity === 'week' && (
                                             <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Semana</th>
                                         )}
-                                        {availableDestinations.map((ciudad, idx) => (
+                                        {weeklyColumnCities.map((ciudad, idx) => (
                                             <th key={ciudad} className="text-right py-2 px-3 text-xs font-semibold uppercase whitespace-nowrap"
                                                 style={{ color: CITY_COLORS[idx % CITY_COLORS.length] }}>
                                                 {ciudad}
@@ -1119,7 +1135,7 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                                             {weeklyGranularity === 'week' && (
                                                 <td className="py-2 px-3 text-gray-600 dark:text-gray-400">Semana {row.semana}</td>
                                             )}
-                                            {availableDestinations.map(ciudad => (
+                                            {weeklyColumnCities.map(ciudad => (
                                                 <td key={ciudad} className="py-2 px-3 text-right text-gray-700 dark:text-gray-300">
                                                     {(row.porCiudad[ciudad] || 0).toLocaleString()}
                                                 </td>
@@ -1132,7 +1148,7 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                                     <tr className="border-t-2 border-gray-200 dark:border-gray-700 font-bold">
                                         <td className="py-2 px-3 text-gray-900 dark:text-white sticky left-0 bg-white dark:bg-gray-900">Total {weeklyYear}</td>
                                         {weeklyGranularity === 'week' && <td className="py-2 px-3" />}
-                                        {availableDestinations.map(ciudad => (
+                                        {weeklyColumnCities.map(ciudad => (
                                             <td key={ciudad} className="py-2 px-3 text-right text-gray-900 dark:text-white">
                                                 {(weeklyTotals.porCiudad[ciudad] || 0).toLocaleString()}
                                             </td>
