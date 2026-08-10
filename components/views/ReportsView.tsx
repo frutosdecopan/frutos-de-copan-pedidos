@@ -2,15 +2,16 @@ import { FC, useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Order, OrderStatus, OrderType } from '../../types';
 import { OrderFilters } from '../../hooks/useOrders';
-import { TrendingUp, MapPin, Calendar, Download, Package } from 'lucide-react';
+import { TrendingUp, MapPin, Calendar, Download, Package, CalendarDays } from 'lucide-react';
 import { ChartSkeleton } from '../common';
+import { exportToExcel } from '../../utils/excelExport';
 
 interface ReportsViewProps {
     fetchOrdersForExport: (filters: OrderFilters) => Promise<Order[]>;
     isDark: boolean;
 }
 
-type ReportTab = 'cities' | 'period' | 'yearly' | 'products';
+type ReportTab = 'cities' | 'period' | 'yearly' | 'products' | 'weekly';
 type PeriodType = 'weekly' | 'monthly' | 'quarterly';
 type MetricType = 'orders' | 'units';
 
@@ -57,6 +58,9 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
     const [compareYears, setCompareYears] = useState<number[]>([currentYear - 1]);
     // Año vs Año
     const [yearFilterCity, setYearFilterCity] = useState<string>('all');
+    // Por Semana
+    const [weeklyYear, setWeeklyYear] = useState<number>(currentYear);
+    const [weeklyGranularity, setWeeklyGranularity] = useState<'week' | 'month'>('week');
 
     const textColor = isDark ? '#9CA3AF' : '#6B7280';
     const gridColor = isDark ? '#374151' : '#E5E7EB';
@@ -256,6 +260,73 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
         );
     };
 
+    // ── Tab 5: Por Semana ────────────────────────────────────────────────────
+    // Ventas por ciudad desglosadas por semana dentro de cada mes de un año
+    // (o colapsadas a nivel mensual). No reutiliza `filteredOrders` porque
+    // esta pestaña tiene su propio selector de año (no rango de fechas) y la
+    // ciudad es una columna, no un filtro.
+    const weeklyBaseOrders = useMemo(() => {
+        return orders.filter(o => {
+            if (filterType !== 'all' && o.orderType !== filterType) return false;
+            if (filterStatus === 'active' && !isActive(o)) return false;
+            if (filterStatus === 'delivered' && o.status !== OrderStatus.DELIVERED) return false;
+            return new Date(o.createdAt).getFullYear() === weeklyYear;
+        });
+    }, [orders, filterType, filterStatus, weeklyYear]);
+
+    interface WeeklyCityRow {
+        mesLabel: string;
+        semana: number | null; // null en modo "mes" (fila ya colapsada)
+        porCiudad: Record<string, number>;
+        total: number;
+    }
+
+    const weeklyCityData = useMemo(() => {
+        // Bloques de 7 días de calendario: día 1-7 = Semana 1, ... 29-31 = Semana 5.
+        const buckets = new Map<string, number>(); // key `${mes}|${semana}|${ciudad}`
+        weeklyBaseOrders.forEach(o => {
+            const d = new Date(o.createdAt);
+            const mes = d.getMonth();
+            const semana = weeklyGranularity === 'week' ? Math.ceil(d.getDate() / 7) : 0;
+            const ciudad = o.destinationName || 'Sin destino';
+            const val = metric === 'orders' ? 1 : getOrderUnits(o);
+            const key = `${mes}|${semana}|${ciudad}`;
+            buckets.set(key, (buckets.get(key) || 0) + val);
+        });
+
+        const rows: WeeklyCityRow[] = [];
+        for (let mes = 0; mes < 12; mes++) {
+            const semanas = weeklyGranularity === 'week' ? [1, 2, 3, 4, 5] : [0];
+            semanas.forEach(semana => {
+                const porCiudad: Record<string, number> = {};
+                let total = 0;
+                let hasAny = false;
+                availableDestinations.forEach(ciudad => {
+                    const val = buckets.get(`${mes}|${semana}|${ciudad}`) || 0;
+                    porCiudad[ciudad] = val;
+                    total += val;
+                    if (val > 0) hasAny = true;
+                });
+                // Semana 5 no siempre existe (no todos los meses llegan al día 29+) —
+                // se omite si no tiene ningún dato, para no ensuciar la tabla.
+                if (weeklyGranularity === 'week' && semana === 5 && !hasAny) return;
+                rows.push({ mesLabel: MONTHS[mes], semana: weeklyGranularity === 'week' ? semana : null, porCiudad, total });
+            });
+        }
+        return rows;
+    }, [weeklyBaseOrders, weeklyGranularity, availableDestinations, metric]);
+
+    const weeklyTotals = useMemo(() => {
+        const porCiudad: Record<string, number> = {};
+        availableDestinations.forEach(c => { porCiudad[c] = 0; });
+        let total = 0;
+        weeklyCityData.forEach(row => {
+            availableDestinations.forEach(c => { porCiudad[c] += row.porCiudad[c] || 0; });
+            total += row.total;
+        });
+        return { porCiudad, total };
+    }, [weeklyCityData, availableDestinations]);
+
     // ── Shared filter bar ───────────────────────────────────────────────────
     const FilterBar = ({ showCity = true }: { showCity?: boolean }) => (
         <div className="flex flex-wrap gap-3 items-end mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
@@ -335,22 +406,6 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
         </div>
     );
 
-    // ── CSV export ───────────────────────────────────────────────────
-    const exportCSV = (rows: Record<string, string | number>[], filename: string) => {
-        if (!rows.length) return;
-        const headers = Object.keys(rows[0]);
-        const csv = [
-            headers.join(';'),
-            ...rows.map(r => headers.map(h => String(r[h] ?? '').replace(/;/g, ',')).join(';'))
-        ].join('\n');
-        // BOM UTF-8 para que Excel lo abra correctamente con tildes/eñes
-        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `${filename}_${new Date().toISOString().slice(0, 10)}.csv`;
-        link.click();
-        URL.revokeObjectURL(link.href);
-    };
 
     if (loadingOrders) {
         return (
@@ -379,6 +434,7 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                     { id: 'period', label: 'Por Periodo', icon: Calendar },
                     { id: 'yearly', label: 'Año vs Año', icon: TrendingUp },
                     { id: 'products', label: 'Por Producto', icon: Package },
+                    { id: 'weekly', label: 'Por Semana', icon: CalendarDays },
                 ] as { id: ReportTab; label: string; icon: any }[]).map(tab => (
                     <button
                         key={tab.id}
@@ -402,7 +458,7 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                             <MapPin className="w-5 h-5 text-amber-500" /> Comparación por Ciudad
                         </h2>
                         <button
-                            onClick={() => exportCSV(
+                            onClick={() => exportToExcel(
                                 cityData.map(r => {
                                     const total = cityData.reduce((s, x) => s + x.pedidos, 0);
                                     return { Ciudad: r.ciudad, Pedidos: r.pedidos, Unidades: r.unidades, 'Porcentaje': total ? `${Math.round(r.pedidos / total * 100)}%` : '0%' };
@@ -509,7 +565,7 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                         </h2>
                         <div className="flex items-center gap-2">
                             <button
-                                onClick={() => exportCSV(
+                                onClick={() => exportToExcel(
                                     periodData.map(r => ({ Periodo: r.periodo, Pedidos: r.pedidos, Unidades: r.unidades })),
                                     'reporte_periodo'
                                 )}
@@ -640,7 +696,7 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                         <button
                             onClick={() => {
                                 const allYears = [currentYear, ...compareYears];
-                                exportCSV(
+                                exportToExcel(
                                     cityYearSummary.map(r => {
                                         const base: Record<string, string | number> = { Ciudad: r.ciudad };
                                         allYears.forEach(y => { base[String(y)] = r.years[y] || 0; });
@@ -844,7 +900,7 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                             <Package className="w-5 h-5 text-orange-500" /> Demanda por Producto
                         </h2>
                         <button
-                            onClick={() => exportCSV(
+                            onClick={() => exportToExcel(
                                 productData.map(r => {
                                     const val = metric === 'orders' ? r.pedidos : r.unidades;
                                     const prevVal = previousPeriodProductMap?.[r.producto] ?? null;
@@ -946,6 +1002,146 @@ export const ReportsView: FC<ReportsViewProps> = ({ fetchOrdersForExport, isDark
                                 </table>
                             </div>
                         </>
+                    )}
+                </div>
+            )}
+
+            {/* ── Tab: Por Semana ─────────────────────────────────────────── */}
+            {activeTab === 'weekly' && (
+                <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 space-y-6">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <CalendarDays className="w-5 h-5 text-purple-500" /> Ventas por Ciudad — Semana / Mes
+                        </h2>
+                        <button
+                            onClick={() => {
+                                const rows = weeklyCityData.map(row => {
+                                    const base: Record<string, string | number> = { Año: weeklyYear, Mes: row.mesLabel };
+                                    if (row.semana !== null) base['Semana'] = `Semana ${row.semana}`;
+                                    availableDestinations.forEach(c => { base[c] = row.porCiudad[c] || 0; });
+                                    base['Total'] = row.total;
+                                    return base;
+                                });
+                                exportToExcel(rows, `reporte_ventas_${weeklyGranularity === 'week' ? 'semanal' : 'mensual'}_${weeklyYear}`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
+                        >
+                            <Download className="w-3.5 h-3.5" /> Exportar Excel
+                        </button>
+                    </div>
+
+                    {/* Filtros propios: año, granularidad, tipo, estado, métrica */}
+                    <div className="flex flex-wrap gap-3 items-end p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Año</label>
+                            <div className="flex flex-wrap gap-1">
+                                {(availableYears.length > 0 ? availableYears : [currentYear]).map(year => (
+                                    <button key={year} onClick={() => setWeeklyYear(year)}
+                                        className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${weeklyYear === year
+                                            ? 'bg-purple-600 border-purple-600 text-white'
+                                            : 'text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-700'}`}>
+                                        {year}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Vista</label>
+                            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                                {(['week', 'month'] as const).map(g => (
+                                    <button key={g} onClick={() => setWeeklyGranularity(g)}
+                                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${weeklyGranularity === g
+                                            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow'
+                                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>
+                                        {g === 'week' ? '📅 Semana' : '🗓 Mes'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tipo de pedido</label>
+                            <select value={filterType} onChange={e => setFilterType(e.target.value)}
+                                className="p-2 rounded-lg border-2 border-amber-400 dark:border-amber-500 bg-white dark:bg-gray-800 text-sm font-semibold text-gray-900 dark:text-white">
+                                <option value={OrderType.SALE}>Solo Ventas ★</option>
+                                <option value="all">Todos los tipos</option>
+                                {Object.values(OrderType).filter(t => t !== OrderType.SALE).map(t =>
+                                    <option key={t} value={t}>{t}</option>
+                                )}
+                            </select>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Estado</label>
+                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
+                                className="p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white">
+                                <option value="all">Todos</option>
+                                <option value="active">Solo Activos</option>
+                                <option value="delivered">Solo Entregados</option>
+                            </select>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Métrica</label>
+                            <select value={metric} onChange={e => setMetric(e.target.value as MetricType)}
+                                className="p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white">
+                                <option value="orders">Pedidos</option>
+                                <option value="units">Unidades</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {availableDestinations.length === 0 || weeklyTotals.total === 0 ? (
+                        <div className="py-16 text-center text-gray-400">No hay datos para el año seleccionado.</div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-gray-100 dark:border-gray-800">
+                                        <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase sticky left-0 bg-white dark:bg-gray-900">Mes</th>
+                                        {weeklyGranularity === 'week' && (
+                                            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Semana</th>
+                                        )}
+                                        {availableDestinations.map((ciudad, idx) => (
+                                            <th key={ciudad} className="text-right py-2 px-3 text-xs font-semibold uppercase whitespace-nowrap"
+                                                style={{ color: CITY_COLORS[idx % CITY_COLORS.length] }}>
+                                                {ciudad}
+                                            </th>
+                                        ))}
+                                        <th className="text-right py-2 px-3 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {weeklyCityData.map((row, ridx) => (
+                                        <tr key={ridx} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                                            <td className="py-2 px-3 font-medium text-gray-900 dark:text-white sticky left-0 bg-white dark:bg-gray-900">{row.mesLabel}</td>
+                                            {weeklyGranularity === 'week' && (
+                                                <td className="py-2 px-3 text-gray-600 dark:text-gray-400">Semana {row.semana}</td>
+                                            )}
+                                            {availableDestinations.map(ciudad => (
+                                                <td key={ciudad} className="py-2 px-3 text-right text-gray-700 dark:text-gray-300">
+                                                    {(row.porCiudad[ciudad] || 0).toLocaleString()}
+                                                </td>
+                                            ))}
+                                            <td className="py-2 px-3 text-right font-semibold text-gray-900 dark:text-white">{row.total.toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot>
+                                    <tr className="border-t-2 border-gray-200 dark:border-gray-700 font-bold">
+                                        <td className="py-2 px-3 text-gray-900 dark:text-white sticky left-0 bg-white dark:bg-gray-900">Total {weeklyYear}</td>
+                                        {weeklyGranularity === 'week' && <td className="py-2 px-3" />}
+                                        {availableDestinations.map(ciudad => (
+                                            <td key={ciudad} className="py-2 px-3 text-right text-gray-900 dark:text-white">
+                                                {(weeklyTotals.porCiudad[ciudad] || 0).toLocaleString()}
+                                            </td>
+                                        ))}
+                                        <td className="py-2 px-3 text-right text-gray-900 dark:text-white">{weeklyTotals.total.toLocaleString()}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     )}
                 </div>
             )}
