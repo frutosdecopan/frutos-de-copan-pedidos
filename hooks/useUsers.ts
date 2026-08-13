@@ -97,7 +97,15 @@ export function useUsers() {
             p_identifier: identifier,
         });
 
-        if (lookupError || !lookup || lookup.length === 0) {
+        if (lookupError) {
+            // No confundir "no pudimos verificar" con "contraseña incorrecta" —
+            // antes este caso también mostraba "usuario o contraseña
+            // incorrectos", lo que hacía imposible distinguir un problema real
+            // de conexión/base de datos de un typo del usuario.
+            console.error('[Login] Error resolviendo usuario -> email:', lookupError);
+            throw new Error('Error de conexión. Intenta de nuevo en unos segundos.');
+        }
+        if (!lookup || lookup.length === 0) {
             throw new Error('Usuario o contraseña incorrectos');
         }
 
@@ -113,6 +121,24 @@ export function useUsers() {
         });
 
         if (signInError || !authData.user) {
+            // Se deja el mensaje genérico de cara al usuario (no revelar si el
+            // usuario existe o no), pero se registra el error real de Supabase —
+            // sin este log, "varios usuarios no pueden entrar ni con contraseña
+            // nueva" es indiagnosticable a ciegas (podría ser rate-limit, una
+            // caída del servicio, etc., no necesariamente credenciales).
+            console.error('[Login] signInWithPassword falló:', {
+                email,
+                status: (signInError as any)?.status,
+                code: (signInError as any)?.code,
+                message: signInError?.message,
+            });
+            const msg = signInError?.message?.toLowerCase() || '';
+            if ((signInError as any)?.status >= 500) {
+                throw new Error('Error del servidor. Intenta de nuevo en unos segundos.');
+            }
+            if (msg.includes('rate limit') || msg.includes('too many')) {
+                throw new Error('Demasiados intentos. Espera un momento e intenta de nuevo.');
+            }
             throw new Error('Usuario o contraseña incorrectos');
         }
 
@@ -123,6 +149,7 @@ export function useUsers() {
             .single();
 
         if (profileError || !profile) {
+            console.error('[Login] Autenticó pero no se encontró el perfil:', { authUserId: authData.user.id, profileError });
             await supabase.auth.signOut();
             throw new Error('No se encontró el perfil de este usuario. Contacta al administrador.');
         }

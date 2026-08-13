@@ -158,7 +158,18 @@ const App = () => {
   // Use users from Supabase
   const displayUsers = users;
 
+  // Se usa para blindar el listener de SIGNED_OUT de abajo contra una
+  // condición de carrera real: si el navegador tenía una sesión vieja
+  // guardada (de un login anterior) cuyo refresh automático falla en
+  // segundo plano, ese SIGNED_OUT puede llegar DESPUÉS de que el usuario ya
+  // inició sesión de nuevo con éxito — sin este blindaje, eso expulsa de
+  // vuelta al login a alguien que sí entró correctamente ("carga y luego me
+  // manda al login otra vez").
+  const lastSignInAtRef = useRef(0);
+
   const enterAppAsUser = (u: User) => {
+    lastSignInAtRef.current = Date.now();
+    isExplicitLogoutRef.current = false; // una sesión nueva empieza limpia
     setUser(u);
 
     // CAUSA RAÍZ del "queda en blanco ~2 minutos": useOrders/useUsers/useCities/
@@ -228,6 +239,14 @@ const App = () => {
 
       if (isExplicitLogoutRef.current) {
         isExplicitLogoutRef.current = false;
+        return;
+      }
+
+      // Ruido de una sesión vieja distinta a la actual (ver comentario en
+      // lastSignInAtRef) — se ignora si acabamos de iniciar sesión hace muy
+      // poco, en vez de deshacer un login que sí funcionó.
+      if (Date.now() - lastSignInAtRef.current < 8000) {
+        console.warn('[Auth] SIGNED_OUT ignorado (llegó justo después de un login exitoso, probablemente de una sesión vieja distinta)');
         return;
       }
 
